@@ -94,12 +94,9 @@ export async function loadUserCharacters(uid) {
 export function activateCharacter(characterData) {
     let player = JSON.parse(JSON.stringify(characterData));
     
-    // Local maps are not persisted across sessions; resume safely on world map
-    if (player.zone !== 'world') { 
-        player.zone = 'world'; 
-        player.x = player.worldX || player.x || 30; 
-        player.y = player.worldY || player.y || 30; 
-    }
+    // Ensure world coordinates are always initialized
+    if (player.worldX === undefined) player.worldX = player.x || 30;
+    if (player.worldY === undefined) player.worldY = player.y || 30;
     
     // Backward compatibility: initialize missing systems
     if (!player.professions) {

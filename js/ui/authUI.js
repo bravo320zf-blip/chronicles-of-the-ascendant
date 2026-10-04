@@ -43,6 +43,29 @@ export function showMainGame() {
     document.getElementById('main-game')?.classList.remove('hidden-ui');
 
     if (gameState.worldMap.length === 0) generateWorld();
+
+    let player = gameState.player;
+    if (player) {
+        // If player has a specific zone saved (e.g. city), re-enter or validate it
+        if (player.zone && player.zone !== 'world') {
+            let poiKey = player.zone.split('_')[0];
+            let poi = gameState.pois[poiKey];
+            if (poi) {
+                enterLocalZone(poiKey, poi);
+            } else {
+                player.zone = 'world';
+                player.x = player.worldX || 30;
+                player.y = player.worldY || 30;
+            }
+        } else if (player.zone === 'world') {
+            // If player is standing at a city coordinate, enter the city
+            let curPOI = gameState.pois[`${player.x},${player.y}`];
+            if (curPOI && curPOI.type === 'C') {
+                enterLocalZone(`${curPOI.rootX},${curPOI.rootY}`, curPOI);
+            }
+        }
+    }
+
     calculateStats();
     renderMap();
     updateAccountBadge();

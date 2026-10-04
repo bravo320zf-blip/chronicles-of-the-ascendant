@@ -119,9 +119,11 @@ export function spawnQuota(targetBiome, type, count, w, h) {
 }
 
 export function placePOI(type, name, rx, ry, biome, id, w, h) {
+    if (rx < 1 || ry < 1 || rx + w >= WORLD_SIZE - 1 || ry + h >= WORLD_SIZE - 1) return false;
     for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
-            if (gameState.pois[`${rx+x},${ry+y}`] || gameState.worldMap[ry+y][rx+x] === '#' || gameState.worldMap[ry+y][rx+x] === 'P') return false; 
+            if (gameState.pois[`${rx+x},${ry+y}`]) return false;
+            if (type !== 'C' && biome !== '#' && gameState.worldMap[ry+y][rx+x] === '#') return false;
         }
     }
     let mainPOI = { type: type, id: id, name: name, biome: biome, rootX: rx, rootY: ry, w: w, h: h };
@@ -253,6 +255,11 @@ export function generateCity(poiKey, poi) {
     
     map[37][20] = '<'; 
     map[19][22] = 'C'; 
+    
+    // Town Square Garden Greenery & Herbs
+    map[18][18] = 's'; map[18][19] = 's';
+    map[22][18] = 's'; map[22][19] = 's';
+    map[18][21] = 't'; map[17][21] = 'l';
     
     let doors = {
         '10,16': { type: 'Alchemy', returnX: 10, returnY: 17 },

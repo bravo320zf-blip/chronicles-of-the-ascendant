@@ -13,6 +13,8 @@ import { calculateStats, renderInventory, closeInventory, sortInventory, useItem
 import { toggleModal, renderStats, renderJournal, renderStash, renderSkills, unlockSkill, upgradeSkill, assignHotkey, renderPassives, upgradePassive } from "./ui/modals.js";
 import { showAuthModal, showCharSelectModal, showCharCreationModal, showMainGame, initAuthUIEvents, updateAccountBadge } from "./ui/authUI.js";
 import { CITIES } from "./data/worldData.js";
+import { MATERIALS, generateRandomItem } from "./data/items.js";
+import { LOCAL_TILES } from "./data/terrain.js";
 import { WORLD_SIZE, LOCAL_SIZE } from "./data/constants.js";
 import { passiveRank } from "./core/state.js";
 
@@ -246,12 +248,17 @@ window.executeAction = function(action) {
     if (action === 'gather') {
         registerAction();
         let gathered = false;
-        let px = player.zone === 'world' ? player.worldX : player.localX;
-        let py = player.zone === 'world' ? player.worldY : player.localY;
+        let px = player.zone === 'world' ? (player.worldX ?? player.x) : player.localX;
+        let py = player.zone === 'world' ? (player.worldY ?? player.y) : player.localY;
         let mapData = player.zone === 'world' ? gameState.worldMap : gameState.localMaps[player.zone]?.map;
         let bound = player.zone === 'world' ? WORLD_SIZE : LOCAL_SIZE;
         
-        const dirs = [[0,-1], [0,1], [-1,0], [1,0], [-1,-1], [1,-1], [-1,1], [1,1]];
+        if (!mapData) {
+            logMessage("Cannot gather here.", "text-gray-500");
+            return;
+        }
+
+        const dirs = [[0,0], [0,-1], [0,1], [-1,0], [1,0], [-1,-1], [1,-1], [-1,1], [1,1]];
         
         for (let d of dirs) {
             let tx = px + d[0]; let ty = py + d[1];
@@ -259,17 +266,39 @@ window.executeAction = function(action) {
                 let tile = mapData[ty][tx];
                 let matId = null; let replacement = '.'; let prof = null;
                 
-                let biome = player.zone === 'world' ? tile : gameState.pois[player.zone.split('_')[0]]?.biome || 'P';
+                let biome = 'P';
+                if (player.zone === 'world') {
+                    let minDist = Infinity;
+                    CITIES.forEach(c => {
+                        let dist = Math.hypot(c.x - px, c.y - py);
+                        if (dist < minDist) { minDist = dist; biome = c.biome; }
+                    });
+                } else {
+                    let poiKey = player.zone.split('_')[0];
+                    biome = gameState.pois[poiKey]?.biome || 'P';
+                }
                 let isCave = !['world'].includes(player.zone) && ['D', '*'].includes(gameState.localMaps[player.zone]?.type);
 
-                if (tile === 't' || tile === 'l') { prof = 'Woodworking'; matId = 'wood_oak'; replacement = 'd'; }
-                else if (tile === 'r' || tile === '#' || tile === 'W') { prof = 'Metalworking'; matId = 'ore_copper'; replacement = (player.zone === 'world' ? 'P' : 'R'); }
-                else if (tile === 's' || tile === 'c') { prof = 'Alchemy'; matId = 'herb_mudleaf'; replacement = (player.zone === 'world' ? 'D' : '.'); }
+                // Determine Profession & Base Material
+                if (tile === 't' || tile === 'l') { 
+                    prof = 'Woodworking'; matId = 'wood_oak'; replacement = 'd'; 
+                } else if (tile === 'd') {
+                    prof = 'Woodworking'; matId = 'wood_oak'; replacement = (player.zone === 'world' ? 'P' : '.');
+                } else if (tile === 'r' || tile === '#' || tile === 'W') { 
+                    prof = 'Metalworking'; matId = 'ore_copper'; replacement = (player.zone === 'world' ? 'P' : 'R'); 
+                } else if (tile === 's' || tile === 'c') { 
+                    prof = 'Alchemy'; matId = 'herb_mudleaf'; replacement = (player.zone === 'world' ? 'D' : '.'); 
+                } else if (tile === 'g') {
+                    prof = 'Alchemy'; matId = 'herb_mudleaf'; replacement = (player.zone === 'world' ? 'P' : '.');
+                } else if (tile === 'i') {
+                    prof = 'Alchemy'; matId = 'herb_frostbloom'; replacement = (player.zone === 'world' ? 'T' : '.');
+                }
                 
                 if (matId && prof) {
-                    let profLvl = player.professions[prof].level;
+                    let profLvl = player.professions?.[prof]?.level || 1;
                     let roll = Math.random();
 
+                    // Level-Gated Rarity Rolls & Biome specifics
                     if (profLvl >= 15 && roll < 0.15) {
                         if (prof === 'Woodworking' && ['S', 'T'].includes(biome)) matId = 'wood_ghost';
                         if (prof === 'Metalworking' && (isCave || biome === 'D')) matId = 'ore_starmetal';
@@ -283,31 +312,43 @@ window.executeAction = function(action) {
                     }
 
                     let item = MATERIALS[matId];
+                    if (!item) continue;
+                    
+                    if (!player.inventory) player.inventory = [];
                     player.inventory.push({...item, count: 1});
                     
                     let rColor = item.rarity === 'Rare' ? 'text-purple-400' : (item.rarity === 'Uncommon' ? 'text-blue-400' : 'text-yellow-400');
-                    logMessage(`You gathered <span class="${rColor} font-bold">${item.name}</span>!`, "system");
+                    let xpGain = item.rarity === 'Rare' ? 25 : (item.rarity === 'Uncommon' ? 15 : 5);
+                    logMessage(`You gathered <span class="${rColor} font-bold">${item.name}</span>! (+${xpGain} ${prof} XP)`, "system");
                     mapData[ty][tx] = replacement;
                     gathered = true;
                     
-                    gainProfessionXP(prof, item.rarity === 'Rare' ? 25 : (item.rarity === 'Uncommon' ? 15 : 5));
+                    gainProfessionXP(prof, xpGain);
 
+                    // Check for Vandalism
                     if (prof === 'Metalworking' && (tile === '#' || tile === 'W') && player.zone !== 'world') {
                         let lMap = gameState.localMaps[player.zone];
                         if (lMap && (lMap.type === 'C' || lMap.type === 'shop')) spawnGuard(px, py);
                     }
 
+                    // Rare Treasure Roll
                     if (Math.random() < 0.05) {
                         let rare = generateRandomItem('Magic');
                         player.inventory.push(rare);
                         logMessage(`You uncovered a hidden treasure: <span class="text-blue-400 font-bold">${rare.name}</span>!`, "success");
                     }
+
                     break; 
                 }
             }
         }
-        if (!gathered) logMessage("There is nothing to gather nearby.", "text-gray-500");
-        else { sortInventory(); renderMap(); triggerAutoSave(); }
+        if (!gathered) {
+            logMessage("There is nothing to gather nearby. Look for trees (♣), rocks (o), shrubs (w), grass (\"), or cactus (╤).", "text-gray-500");
+        } else { 
+            sortInventory(); 
+            renderMap(); 
+            triggerAutoSave(); 
+        }
         return;
     }
     
@@ -519,8 +560,10 @@ function initCharacterCreation() {
             let newChar = createDefaultPlayer();
             newChar.name = name;
             newChar.backstory = document.getElementById('cc-backstory').value.trim();
-            newChar.boundCity = parseInt(document.getElementById('cc-city').value);
-            newChar.loadout = document.getElementById('cc-loadout').value;
+            let cityIdx = parseInt(document.getElementById('cc-city')?.value);
+            if (isNaN(cityIdx) || cityIdx < 0 || cityIdx >= CITIES.length) cityIdx = 4;
+            newChar.boundCity = cityIdx;
+            newChar.loadout = document.getElementById('cc-loadout')?.value || 'warrior';
 
             newChar.equipment.light = { id: 'torch', category: 'consumable', type: 'consumable', name: 'Pine Torch', life: 100, maxLife: 100, rarity: 'Basic', stats: {}, desc: 'Provides light. Decays over time.', price: 15 };
 
@@ -542,11 +585,12 @@ function initCharacterCreation() {
                 newChar.hotkeys.q = 'backstab';
             }
 
-            let startCity = CITIES[newChar.boundCity];
+            let startCity = CITIES[cityIdx];
             newChar.x = startCity.x; 
             newChar.y = startCity.y; 
             newChar.worldX = startCity.x; 
             newChar.worldY = startCity.y;
+            newChar.zone = `${startCity.x},${startCity.y}_0`;
 
             activateCharacter(newChar);
             generateWorld();
