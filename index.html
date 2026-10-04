@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronicles of the Ascendant - Online MUD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="crt" id="app-root">
+
+    <!-- ============================================== -->
+    <!-- AUTHENTICATION MODAL (SIGN IN / CREATE ACCOUNT) -->
+    <!-- ============================================== -->
+    <div id="auth-modal" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
+        <div class="panel p-8 max-w-md w-full">
+            <h1 class="text-3xl font-bold mb-2 text-center text-green-400">CHRONICLES OF THE ASCENDANT</h1>
+            <p class="text-xs text-center text-gray-400 mb-6 tracking-widest uppercase">Persistent Multi-User Dungeon</p>
+
+            <div class="flex border-b border-green-900 mb-6">
+                <button id="tab-sign-in" class="flex-1 py-2 text-center text-sm font-bold text-green-400 border-b-2 border-green-400">SIGN IN</button>
+                <button id="tab-sign-up" class="flex-1 py-2 text-center text-sm font-bold text-gray-500">CREATE ACCOUNT</button>
+            </div>
+
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label class="block mb-1 text-xs text-gray-400 uppercase">Email / Account ID:</label>
+                    <input type="email" id="auth-email" required class="input-box w-full" placeholder="player@ascendant.realm">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs text-gray-400 uppercase">Password:</label>
+                    <input type="password" id="auth-password" required minlength="6" class="input-box w-full" placeholder="••••••••">
+                </div>
+
+                <div id="auth-error" class="text-red-400 text-xs min-h-[1.2rem]"></div>
+
+                <button type="submit" id="btn-auth-submit" class="btn-term w-full text-base font-bold bg-green-900/30">SIGN IN</button>
+            </form>
+
+            <div class="mt-4 pt-4 border-t border-green-900/50 flex flex-col gap-2">
+                <button id="btn-auth-guest" class="btn-term w-full text-xs text-yellow-400 border-yellow-800 hover:bg-yellow-900/30">PLAY AS GUEST (OFFLINE / DEMO)</button>
+                <button id="btn-firebase-settings" class="text-[10px] text-gray-500 hover:text-cyan-400 text-center mt-2 underline">⚙ Firebase Backend Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SETTINGS MODAL (FIREBASE CONFIG)               -->
+    <!-- ============================================== -->
+    <div id="settings-modal" class="hidden-ui absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4">
+        <div class="panel p-6 max-w-xl w-full">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4">
+                <h2 class="text-lg font-bold text-cyan-400">FIREBASE CLOUD BACKEND SETUP</h2>
+                <button class="text-red-500 hover:text-red-400 font-bold" onclick="document.getElementById('settings-modal').classList.add('hidden-ui')">[X]</button>
+            </div>
+            <p class="text-xs text-gray-300 mb-3 leading-relaxed">
+                To connect online with other players for free, create a free project at <span class="text-yellow-400 font-mono">console.firebase.google.com</span>. Enable <strong>Authentication</strong> (Email/Password & Anonymous) and <strong>Firestore</strong>. Paste your project's Web App configuration below:
+            </p>
+            <textarea id="settings-firebase-config" class="input-box w-full h-36 font-mono text-xs mb-4" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-app.firebaseapp.com",
+  "projectId": "your-app",
+  "storageBucket": "your-app.appspot.com",
+  "messagingSenderId": "123...",
+  "appId": "1:123..."
+}'></textarea>
+            <div class="flex justify-end gap-3">
+                <button class="btn-term text-xs" onclick="document.getElementById('settings-modal').classList.add('hidden-ui')">CANCEL</button>
+                <button id="btn-save-settings" class="btn-term text-xs text-cyan-400 border-cyan-700 bg-cyan-900/30 font-bold">SAVE & RELOAD</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- CHARACTER SELECTION MODAL                      -->
+    <!-- ============================================== -->
+    <div id="char-select-modal" class="hidden-ui absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
+        <div class="panel p-8 max-w-3xl w-full">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-green-400">SELECT YOUR ADVENTURER</h1>
+                    <p class="text-xs text-gray-500">Choose a character slot or forge a new legend</p>
+                </div>
+            </div>
+
+            <div id="char-slots-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 max-h-[60vh] overflow-y-auto log-container pr-2">
+                <!-- Character cards rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- CHARACTER CREATION SEQUENCE                    -->
+    <!-- ============================================== -->
+    <div id="char-creation" class="hidden-ui absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
+        <div class="panel p-8 max-w-2xl w-full">
+            <h1 class="text-3xl font-bold mb-4 text-center text-green-400">INITIALIZE SEQUENCE</h1>
+            
+            <div class="mb-4">
+                <label class="block mb-2 text-sm">DESIGNATION (NAME):</label>
+                <input type="text" id="cc-name" class="input-term p-2" placeholder="Enter character name...">
+            </div>
+
+            <div class="mb-4">
+                <label class="block mb-2 text-sm">ORIGIN STORY (BACKSTORY):</label>
+                <textarea id="cc-backstory" class="input-term p-2 h-20 resize-none" placeholder="Who are you? What drives you forward?"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block mb-2 text-sm">LOADOUT:</label>
+                    <select id="cc-loadout" class="w-full bg-black border border-green-800 text-green-400 p-2 outline-none">
+                        <option value="warrior">Warrior (Sword & Shield)</option>
+                        <option value="mage">Mage (Staff & Robes)</option>
+                        <option value="rogue">Rogue (Daggers & Cloak)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-2 text-sm">STARTING CITY:</label>
+                    <select id="cc-city" class="w-full bg-black border border-green-800 text-green-400 p-2 outline-none">
+                        <option value="0">Oakhaven (Forest)</option>
+                        <option value="1">Mirage Edge (Desert)</option>
+                        <option value="2">Frosthold (Tundra)</option>
+                        <option value="3">Bogwatch (Swamp)</option>
+                        <option value="4" selected>Kingsfall (Plains)</option>
+                        <option value="5">Embergard (Volcanic)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button id="btn-cancel-char-create" class="btn-term text-sm px-6">CANCEL</button>
+                <button id="btn-start-game" class="btn-term flex-1 text-base font-bold bg-green-900/40">ENTER THE REALM</button>
+            </div>
+            <div id="cc-loading" class="hidden-ui text-center mt-4 blink">AUTHENTICATING CONNECTION...</div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MAIN GAME SCREEN                               -->
+    <!-- ============================================== -->
+    <div id="main-game" class="hidden-ui flex-1 flex flex-col h-full p-2 gap-2">
+        <div class="flex-1 flex flex-col md:flex-row gap-2 overflow-hidden">
+            
+            <!-- LEFT PANEL: MAP, STATUS & QUICK CONTROLS -->
+            <div class="panel flex flex-col w-full md:w-1/3 max-w-[420px] p-2 relative">
+                
+                <!-- TOP HEADER STATUS BAR -->
+                <div class="text-center border-b border-green-900 pb-2 mb-2 font-bold flex flex-wrap justify-between items-center text-xs md:text-sm gap-1">
+                    <span id="ui-name" class="text-green-400 font-bold">PlayerName</span>
+                    <span id="ui-time-top" class="text-yellow-400 bg-yellow-900/30 px-2 py-0.5 border border-yellow-700 shadow-sm rounded-sm">08:00 AM</span>
+                    <span id="ui-xp" class="text-purple-400">XP: 0/100</span>
+                    <span id="ui-hp" class="text-red-400">HP: 100/100</span>
+                    <span id="ui-mp" class="text-blue-400">MP: 50/50</span>
+                </div>
+
+                <div class="flex justify-between items-center px-1 mb-1 text-[11px] border-b border-green-900/40 pb-1">
+                    <span id="ui-account-badge" class="text-gray-400">Connecting...</span>
+                    <span id="ui-online-count" class="text-cyan-400 font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-900">1 Online</span>
+                </div>
+                
+                <!-- ASCII MAP CONTAINER -->
+                <div id="map-container" class="flex-1 flex flex-col items-center justify-center bg-black border border-green-900 mb-2 relative overflow-hidden min-h-[300px] fow-mask">
+                    <div id="ascii-map" class="ascii-art text-sm sm:text-base md:text-lg tracking-widest leading-none">
+                    </div>
+                    
+                    <div class="absolute top-1 left-1 text-[10px] text-gray-500 bg-black/80 px-1 border border-green-900" id="ui-biome">Biome</div>
+                    <div class="absolute top-1 right-1 text-[10px] text-gray-500 bg-black/80 px-1 border border-green-900" id="ui-coords">0,0</div>
+                </div>
+                
+                <!-- QUICK TOUCH / MOUSE CONTROLS -->
+                <div class="grid grid-cols-3 gap-1 mb-2">
+                    <button class="btn-term p-1 text-[10px]" onclick="executeAction('legend')">MAP KEY</button>
+                    <button class="btn-term p-1" onclick="movePlayer(0, -1)">▲ N</button>
+                    <button class="btn-term p-1 text-[10px]" onclick="toggleTorch()" id="btn-torch">TORCH [F]</button>
+                    
+                    <button class="btn-term p-1" onclick="movePlayer(-1, 0)">◄ W</button>
+                    <button class="btn-term p-1" onclick="executeAction('look')">LOOK</button>
+                    <button class="btn-term p-1" onclick="movePlayer(1, 0)">E ►</button>
+                    
+                    <button class="btn-term p-1 text-[10px] font-bold text-yellow-500 border-yellow-900 hover:bg-yellow-900/30" onclick="executeAction('gather')">GATHER [G]</button>
+                    <button class="btn-term p-1" onclick="movePlayer(0, 1)">▼ S</button>
+                    <button class="btn-term p-1 text-[10px] text-cyan-400 border-cyan-900 hover:bg-cyan-900/30" onclick="executeAction('rest')">REST</button>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: MUD TERMINAL LOG & INPUT -->
+            <div class="panel flex-1 flex flex-col p-4 relative">
+                <div id="game-log" class="flex-1 overflow-y-auto log-container whitespace-pre-wrap break-words pb-4">
+                    Welcome to the Chronicles of the Ascendant...<br>
+                    Type <span class="text-yellow-400">/help</span> for a list of MUD commands and keyboard shortcuts.<br>
+                </div>
+                <div class="mt-2 flex gap-2 border-t border-green-900 pt-2">
+                    <span class="text-green-500 font-bold">&gt;</span>
+                    <input type="text" id="cmd-input" class="input-term flex-1 bg-transparent" placeholder="Type a command (/say, /shout, /who, /torch, /help)..." autocomplete="off">
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM TOOLBAR -->
+        <div class="panel p-2 flex flex-wrap gap-2 justify-center">
+            <button class="btn-term text-sm" onclick="toggleModal('stats-modal')">Character [C]</button>
+            <button class="btn-term text-sm" onclick="toggleModal('inventory-modal')">Inventory [I]</button>
+            <button class="btn-term text-sm text-red-400 border-red-900 hover:bg-red-900/30" onclick="executeAction('attack')">Attack [A]</button>
+            <button class="btn-term text-sm" onclick="toggleModal('skills-modal')">Skills & Spells [S]</button>
+            <button class="btn-term text-sm border-cyan-700 text-cyan-400 hover:bg-cyan-900/30" onclick="toggleModal('crafting-modal')">Crafting [R]</button>
+            <button class="btn-term text-sm" onclick="toggleModal('passive-modal')">Passive Tree [P]</button>
+            <button class="btn-term text-sm" onclick="toggleModal('journal-modal')">Journal [J]</button>
+            <button class="btn-term text-sm text-yellow-400 border-yellow-900 hover:bg-yellow-900/30" onclick="executeAction('rest')">Rest</button>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODALS                                         -->
+    <!-- ============================================== -->
+
+    <!-- CHARACTER STATS MODAL -->
+    <div id="stats-modal" class="hidden-ui absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-4">
+        <div class="panel w-full max-w-md p-6">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4">
+                <h2 class="text-xl font-bold text-cyan-400">CHARACTER STATS</h2>
+                <button class="text-red-500 hover:text-red-400 font-bold" onclick="toggleModal('stats-modal')">[X]</button>
+            </div>
+            <div id="stats-content" class="text-sm space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- INVENTORY & EQUIPMENT MODAL -->
+    <div id="inventory-modal" class="hidden-ui absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-4">
+        <div class="panel w-full max-w-5xl h-[85vh] flex flex-col p-6">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-bold text-yellow-500">INVENTORY & EQUIPMENT</h2>
+                    <span id="ui-gold-display" class="text-yellow-400 font-bold text-lg">Gold: 0</span>
+                </div>
+                <div class="flex gap-4">
+                    <button class="text-yellow-400 hover:text-white text-sm font-bold border border-yellow-900 px-2 py-1" onclick="sortInventory()">[AUTO-SORT]</button>
+                    <button class="text-red-500 hover:text-red-400 font-bold" onclick="closeInventory()">[X]</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-hidden flex flex-col md:flex-row gap-6">
+                <div class="w-full md:w-1/2 flex flex-col h-full">
+                    <h3 id="backpack-title" class="text-green-500 mb-2 border-b border-green-900/50 pb-1 text-sm font-bold tracking-widest uppercase">Backpack & Materials</h3>
+                    <div id="inventory-content" class="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-2 gap-2 pr-2 log-container content-start pb-4"></div>
+                </div>
+                <div class="w-full md:w-1/2 flex flex-col h-full border-t md:border-t-0 md:border-l border-green-900 pt-4 md:pt-0 md:pl-6">
+                    <h3 class="text-cyan-500 mb-2 border-b border-green-900/50 pb-1 text-sm font-bold tracking-widest uppercase">Equipped</h3>
+                    <div id="equipment-content" class="flex-1 overflow-y-auto pr-2 log-container pb-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFESSIONS & CRAFTING MODAL -->
+    <div id="crafting-modal" class="hidden-ui absolute inset-0 z-40 bg-black/95 flex items-center justify-center p-4">
+        <div class="panel w-full max-w-5xl h-[85vh] flex flex-col p-6 border-cyan-900 shadow-[0_0_20px_rgba(0,255,255,0.1)]">
+            <div class="flex justify-between items-center border-b border-cyan-900 pb-2 mb-4">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-bold text-cyan-400">PROFESSIONS & CRAFTING</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="text-red-500 hover:text-red-400 font-bold ml-4" onclick="toggleModal('crafting-modal')">[X]</button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-hidden flex flex-col md:flex-row gap-6">
+                <!-- Recipes List -->
+                <div class="w-full md:w-1/3 flex flex-col h-full">
+                    <h3 class="text-yellow-500 mb-2 border-b border-yellow-900/50 pb-1 text-sm font-bold tracking-widest uppercase">Blueprints</h3>
+                    <div id="recipe-list" class="flex-1 overflow-y-auto space-y-2 pr-2 log-container pb-4"></div>
+                </div>
+                <!-- Crafting Station Details -->
+                <div class="w-full md:w-2/3 flex flex-col h-full border-t md:border-t-0 md:border-l border-cyan-900 pt-4 md:pt-0 md:pl-6 relative">
+                    <h3 class="text-cyan-500 mb-2 border-b border-cyan-900/50 pb-1 text-sm font-bold tracking-widest uppercase">Workbench</h3>
+                    <div id="recipe-details" class="flex-1 flex flex-col items-center justify-center text-center p-4">
+                        <div class="text-gray-500 italic">Select a blueprint to begin crafting.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPELLS & SKILLS MODAL -->
+    <div id="skills-modal" class="hidden-ui absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-4">
+        <div class="panel w-full max-w-4xl max-h-[90vh] flex flex-col p-6">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4">
+                <h2 class="text-xl font-bold text-cyan-400">SPELLS & SKILLS</h2>
+                <button class="text-red-500 hover:text-red-400 font-bold" onclick="toggleModal('skills-modal')">[X]</button>
+            </div>
+            <div class="space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- CITY STASH MODAL -->
+    <div id="stash-modal" class="hidden-ui absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-4">
+        <div class="panel w-full max-w-5xl h-[85vh] flex flex-col p-6">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4 shrink-0 flex-wrap gap-4">
+                <h2 class="text-xl font-bold text-yellow-500">CITY VAULT & STASH</h2>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-2 border border-yellow-900 bg-black p-1 px-3">
+                        <span class="text-gray-400 text-xs uppercase tracking-widest font-bold">Stashed:</span>
+                        <span id="ui-stashed-gold" class="text-yellow-400 font-bold">0g</span>
+                    </div>
+                    <div class="flex items-center gap-2 border border-yellow-900 bg-black p-1 px-3">
+                        <span class="text-gray-400 text-xs uppercase tracking-widest font-bold">Pocket:</span>
+                        <span id="ui-pocket-gold" class="text-yellow-400 font-bold">0g</span>
+                    </div>
+                    <div class="flex gap-2 ml-2">
+                        <input type="number" id="stash-gold-input" class="bg-black border border-yellow-900 text-yellow-400 p-1 w-20 outline-none text-right text-sm" placeholder="Amt" min="1">
+                        <button class="text-xs font-bold bg-yellow-900/50 hover:bg-yellow-700 text-white px-2 py-1 border border-yellow-800 transition-colors" onclick="handleGoldStash('deposit')">DEPOSIT</button>
+                        <button class="text-xs font-bold bg-cyan-900/50 hover:bg-cyan-700 text-white px-2 py-1 border border-cyan-800 transition-colors" onclick="handleGoldStash('withdraw')">WITHDRAW</button>
+                    </div>
+                    <button class="text-red-500 hover:text-red-400 font-bold ml-4" onclick="toggleModal('stash-modal')">[X]</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-hidden flex flex-col md:flex-row gap-6">
+                <div class="w-full md:w-1/2 flex flex-col h-full">
+                    <h3 class="text-green-500 mb-2 border-b border-green-900/50 pb-1 text-sm font-bold tracking-widest uppercase">Your Backpack (Click to Store)</h3>
+                    <div id="stash-inventory-content" class="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-2 gap-2 pr-2 log-container content-start pb-4"></div>
+                </div>
+                <div class="w-full md:w-1/2 flex flex-col h-full border-t md:border-t-0 md:border-l border-green-900 pt-4 md:pt-0 md:pl-6">
+                    <h3 class="text-cyan-500 mb-2 border-b border-green-900/50 pb-1 text-sm font-bold tracking-widest uppercase">Vault (Click to Withdraw)</h3>
+                    <div id="stash-box-content" class="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-2 gap-2 pr-2 log-container content-start pb-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PASSIVE SKILL TREE MODAL -->
+    <div id="passive-modal" class="hidden-ui absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-4">
+        <div class="panel w-full max-w-5xl max-h-[90vh] flex flex-col p-6">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4 shrink-0">
+                <h2 class="text-xl font-bold">PASSIVE SKILL TREE</h2>
+                <div class="flex items-center gap-4">
+                    <span class="text-yellow-400 font-bold tracking-widest text-sm bg-yellow-900/20 px-3 py-1 border border-yellow-900">SKILL POINTS: <span id="ui-sp">0</span></span>
+                    <button class="text-red-500 hover:text-red-400 font-bold" onclick="toggleModal('passive-modal')">[X]</button>
+                </div>
+            </div>
+            <div id="passive-content" class="flex-1 overflow-y-auto log-container grid grid-cols-1 md:grid-cols-3 gap-6 pr-2 pb-4"></div>
+        </div>
+    </div>
+
+    <!-- QUEST JOURNAL MODAL -->
+    <div id="journal-modal" class="hidden-ui absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-4">
+        <div class="panel w-full max-w-3xl max-h-[85vh] flex flex-col p-6">
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4 shrink-0">
+                <h2 class="text-xl font-bold text-blue-400">QUEST JOURNAL</h2>
+                <button class="text-red-500 hover:text-red-400 font-bold" onclick="toggleModal('journal-modal')">[X]</button>
+            </div>
+            <div id="journal-content" class="flex-1 overflow-y-auto log-container space-y-4 pr-2 pb-4"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

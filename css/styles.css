@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap');
+
+:root {
+    --term-bg: #050505;
+    --term-fg: #33ff33;
+    --term-dim: #1a661a;
+    --term-alert: #ff3333;
+    --term-highlight: #ffff33;
+    --term-cyan: #00ffff;
+    --term-purple: #c084fc;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--term-bg);
+    color: var(--term-fg);
+    font-family: 'Fira Code', monospace;
+    overflow: hidden; 
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+}
+
+.crt {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.crt::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 2;
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+}
+
+.panel {
+    border: 1px solid var(--term-dim);
+    background: rgba(0, 0, 0, 0.85);
+    box-shadow: 0 0 10px rgba(51, 255, 51, 0.1);
+}
+
+.ascii-art {
+    white-space: pre;
+    line-height: 1.1;
+    font-size: 0.85rem;
+    user-select: none;
+}
+
+.map-tile {
+    display: inline-block;
+    width: 1ch;
+    text-align: center;
+}
+
+@media (min-width: 768px) {
+    .ascii-art { font-size: 1rem; }
+}
+
+.map-player { 
+    color: #ffffff; 
+    font-weight: bold; 
+    background-color: #000;
+    text-shadow: 0 0 4px #ffffff;
+}
+
+.map-online-player {
+    color: #38bdf8;
+    font-weight: bold;
+    background-color: rgba(6, 182, 212, 0.2);
+    text-shadow: 0 0 6px #00ffff;
+}
+
+.map-city { color: #0ff; font-weight: bold; }
+.map-dungeon { color: #f00; font-weight: bold; }
+.map-cave { color: #f80; }
+.map-fort { color: #a55; font-weight: bold; }
+
+.log-container {
+    scrollbar-width: thin;
+    scrollbar-color: var(--term-dim) var(--term-bg);
+}
+.log-container::-webkit-scrollbar { width: 8px; }
+.log-container::-webkit-scrollbar-track { background: var(--term-bg); }
+.log-container::-webkit-scrollbar-thumb { background-color: var(--term-dim); }
+
+.btn-term {
+    background: transparent;
+    color: var(--term-fg);
+    border: 1px solid var(--term-dim);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.btn-term:hover:not(:disabled) {
+    background: var(--term-dim);
+    color: #fff;
+    box-shadow: 0 0 5px var(--term-fg);
+}
+.btn-term:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.input-term {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--term-fg);
+    color: #fff;
+    font-family: inherit;
+    outline: none;
+    width: 100%;
+}
+.input-term:focus {
+    border-bottom-color: var(--term-cyan);
+}
+
+.input-box {
+    background: #000000;
+    border: 1px solid var(--term-dim);
+    color: #33ff33;
+    font-family: inherit;
+    padding: 0.5rem;
+    outline: none;
+}
+.input-box:focus {
+    border-color: var(--term-cyan);
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+}
+
+.blink { animation: blinker 1s linear infinite; }
+@keyframes blinker { 50% { opacity: 0; } }
+
+/* FOG OF WAR CSS MASKS */
+.fow-mask {
+    mask-image: radial-gradient(circle at center, black 35%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at center, black 35%, transparent 80%);
+}
+.fow-mask-night {
+    mask-image: radial-gradient(circle at center, black 15%, transparent 50%);
+    -webkit-mask-image: radial-gradient(circle at center, black 15%, transparent 50%);
+}
+
+.hidden-ui { display: none !important; }
+
+/* Multiplayer Chat Styles */
+.chat-say { color: #a7f3d0; }
+.chat-shout { color: #facc15; font-weight: bold; }
+.chat-whisper { color: #f472b6; font-style: italic; }
+.chat-system { color: #fde047; }
+
+/* Custom character card hover */
+.char-slot-card {
+    border: 1px solid #1a661a;
+    transition: all 0.2s ease-in-out;
+}
+.char-slot-card:hover {
+    border-color: #33ff33;
+    box-shadow: 0 0 10px rgba(51, 255, 51, 0.25);
+}
