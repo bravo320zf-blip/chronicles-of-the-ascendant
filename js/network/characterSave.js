@@ -3,6 +3,7 @@ import { db, isOfflineMode, doc, getDoc, setDoc, deleteDoc } from "../config/fir
 import { gameState, TRANSIENT_STATE } from "../core/state.js";
 import { APP_ID, SAVE_VERSION } from "../data/constants.js";
 import { calculateStats } from "../core/inventory.js";
+import { getGlobalWorldTimeMinutes } from "../core/time.js";
 
 let saveTimer = null;
 
@@ -97,6 +98,9 @@ export function activateCharacter(characterData) {
     // Ensure world coordinates are always initialized
     if (player.worldX === undefined) player.worldX = player.x || 30;
     if (player.worldY === undefined) player.worldY = player.y || 30;
+
+    // Synchronize to realm server world clock
+    player.time = getGlobalWorldTimeMinutes();
     
     // Backward compatibility: initialize missing systems
     if (!player.professions) {

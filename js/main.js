@@ -5,7 +5,7 @@ import { loadUserCharacters, activateCharacter, triggerAutoSave, flushSave } fro
 import { initMultiplayer, broadcastPresence, sendChatMessage, listOnlinePlayers } from "./network/multiplayer.js";
 import { generateWorld, enterLocalZone, enterFloor, generateBuildingInterior, generateArena, spawnQuota, spawnWorldBoss } from "./core/worldGen.js";
 import { renderMap, updateStatus } from "./ui/renderer.js";
-import { toggleTorch, updateTimeUI } from "./core/time.js";
+import { toggleTorch, updateTimeUI, startTimeLoop, getGlobalWorldTimeMinutes, formatTime, isWorldNight } from "./core/time.js";
 import { logMessage, playEncounterAnimation } from "./ui/log.js";
 import { moveEntities, moveWorldEntities, talkToNPC, handleDialogue, showDialogueOptions, showWares, spawnGuard, applyGuardDeathPenalty } from "./core/entities.js";
 import { registerAction, hasLineOfSight, updateProjectiles, resolveSkillHit, triggerCombat, triggerLocalCombat, gainXP, handleCombatTurn, useActiveSkill, confirmCast, executeTargeting, triggerBossDefeat } from "./core/combat.js";
@@ -426,12 +426,17 @@ function initCommandInput() {
             else if (['s', 'south'].includes(cmd.toLowerCase())) movePlayer(0, 1);
             else if (['w', 'west'].includes(cmd.toLowerCase())) movePlayer(-1, 0);
             else if (['e', 'east'].includes(cmd.toLowerCase())) movePlayer(1, 0);
+            else if (cmd === '/time' || cmd === 'time' || cmd === '/clock' || cmd === 'clock') {
+                let m = getGlobalWorldTimeMinutes();
+                let night = isWorldNight(m);
+                logMessage(`The server world clock reads: <span class="${night ? 'text-blue-300' : 'text-yellow-400'} font-bold">${formatTime(m)} (${night ? 'Night' : 'Day'})</span>.`, "system");
+            }
             else if (cmd === '/help' || cmd === 'help') {
                 logMessage("=== MUD COMMAND GUIDE ===", "system");
                 logMessage("Movement: [Arrow Keys] or 'n', 's', 'e', 'w'");
                 logMessage("Chat: '/say <msg>' (local) | '/shout <msg>' (global) | '/who' (online players)");
                 logMessage("Shortcuts: [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather, [Q]/[E] Cast Spells");
-                logMessage("Commands: /look, /gather, /rest, /torch, /respawn");
+                logMessage("Commands: /look, /gather, /rest, /torch, /time, /respawn");
             }
             else if (cmd === '/respawn') {
                 let player = gameState.player;
@@ -631,6 +636,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initKeyboardControls();
     initAuthUIEvents();
     initCharacterCreation();
+    startTimeLoop();
     initMultiplayer();
 
     // Start Authentication Flow

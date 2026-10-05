@@ -1,7 +1,34 @@
 // Time progression, Day/Night cycles, and Torch Mechanics
 import { gameState } from "./state.js";
 import { logMessage } from "../ui/log.js";
-import { GAME_MINUTES_PER_REAL_SECOND } from "../data/constants.js";
+
+let serverTimeOffsetMs = 0;
+let timeTickerInterval = null;
+let lastKnownNightState = null;
+let torchIdleCounter = 0;
+
+export function setServerTimeOffset(offsetMs) {
+    serverTimeOffsetMs = offsetMs || 0;
+    updateTimeUI();
+}
+
+export function getServerTimeOffset() {
+    return serverTimeOffsetMs;
+}
+
+export function getGlobalWorldTimeMinutes() {
+    // 1 real-life second = 1 in-game minute
+    // 24 real-life minutes (1440 seconds) = 1 full in-game day (1440 minutes)
+    const currentServerTimeMs = Date.now() + serverTimeOffsetMs;
+    const totalSeconds = Math.floor(currentServerTimeMs / 1000);
+    return ((totalSeconds % 1440) + 1440) % 1440;
+}
+
+export function isWorldNight(minutes = null) {
+    const m = minutes !== null ? minutes : getGlobalWorldTimeMinutes();
+    // 06:00 PM (1080) to 06:00 AM (360) is Night; 06:00 AM to 06:00 PM is Day
+    return m >= 1080 || m < 360;
+}
 
 export function formatTime(minutes) {
     let h = Math.floor(minutes / 60) % 24;
@@ -12,32 +39,36 @@ export function formatTime(minutes) {
     return `${dispH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-export function getGlobalWorldTimeMinutes() {
-    // Synchronized World Clock: Shared epoch math across all players
-    // 1 full in-game day (1440 minutes) corresponds to 24 real-world minutes (1440 seconds)
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    const dayCycleSeconds = 24 * 60; // 1440 seconds
-    const elapsedToday = nowSeconds % dayCycleSeconds;
-    return Math.floor(elapsedToday * GAME_MINUTES_PER_REAL_SECOND);
-}
-
 export function updateTimeUI() {
-    let player = gameState.player;
-    if (!player.time) player.time = 480;
-    let timeStr = formatTime(player.time);
+    const worldMinutes = getGlobalWorldTimeMinutes();
+    if (gameState.player) {
+        gameState.player.time = worldMinutes;
+    }
+
+    const night = isWorldNight(worldMinutes);
+    const timeStr = `${night ? '🌙' : '☀️'} ${formatTime(worldMinutes)}`;
     
-    let timeTopEl = document.getElementById('ui-time-top');
-    if (timeTopEl) timeTopEl.innerText = timeStr;
-    
-    let btn = document.getElementById('btn-torch');
-    if (btn) {
-        if (player.torchActive) {
-            let life = player.equipment && player.equipment.light ? player.equipment.light.life : 0;
-            btn.innerText = `TORCH ON (${life})`;
-            btn.classList.add('text-yellow-400', 'border-yellow-400');
-        } else {
-            btn.innerText = `TORCH [F]`;
-            btn.classList.remove('text-yellow-400', 'border-yellow-400');
+    if (typeof document !== 'undefined') {
+        const timeTopEl = document.getElementById('ui-time-top');
+        if (timeTopEl) {
+            timeTopEl.innerText = timeStr;
+            if (night) {
+                timeTopEl.className = "text-blue-300 bg-blue-950/40 px-2 py-0.5 border border-blue-700 shadow-sm rounded-sm font-mono";
+            } else {
+                timeTopEl.className = "text-yellow-400 bg-yellow-900/30 px-2 py-0.5 border border-yellow-700 shadow-sm rounded-sm font-mono";
+            }
+        }
+        
+        const btn = document.getElementById('btn-torch');
+        if (btn && gameState.player) {
+            if (gameState.player.torchActive) {
+                let life = gameState.player.equipment?.light?.life || 0;
+                btn.innerText = `TORCH ON (${life})`;
+                btn.classList.add('text-yellow-400', 'border-yellow-400');
+            } else {
+                btn.innerText = `TORCH [F]`;
+                btn.classList.remove('text-yellow-400', 'border-yellow-400');
+            }
         }
     }
 }
@@ -54,19 +85,42 @@ export function toggleTorch() {
     if (window.renderMap) window.renderMap();
 }
 
-export function advanceWorldTime(deltaMinutes = 1) {
-    let player = gameState.player;
-    player.time = (player.time + deltaMinutes) % 1440;
+// 1-second real-time game clock loop: 1 real second = 1 in-game minute
+export function startTimeLoop() {
+    if (timeTickerInterval) clearInterval(timeTickerInterval);
 
-    // Torch decay
-    if (player.torchActive && player.equipment && player.equipment.light) {
-        let torch = player.equipment.light;
-        torch.life = Math.max(0, torch.life - 1);
-        if (torch.life <= 0) {
-            player.torchActive = false;
-            player.equipment.light = null;
-            logMessage("Your torch has sputtered out and turned to ash!", "text-orange-400");
-        }
-    }
+    lastKnownNightState = isWorldNight();
     updateTimeUI();
+
+    timeTickerInterval = setInterval(() => {
+        const worldMinutes = getGlobalWorldTimeMinutes();
+        const currentNightState = isWorldNight(worldMinutes);
+
+        updateTimeUI();
+
+        // Broadcast sunrise and nightfall transitions
+        if (lastKnownNightState !== null && lastKnownNightState !== currentNightState) {
+            if (currentNightState) {
+                logMessage("Night falls across the realm. Darkness blankets the land.", "text-blue-300");
+            } else {
+                logMessage("The sun rises above the horizon. A new day begins.", "text-yellow-300");
+            }
+            if (window.renderMap) window.renderMap();
+        }
+        lastKnownNightState = currentNightState;
+
+        // Passive torch decay while burning (1 point every 6 real seconds = 6 in-game minutes)
+        if (gameState.player?.torchActive && gameState.player.equipment?.light) {
+            torchIdleCounter = (torchIdleCounter + 1) % 6;
+            if (torchIdleCounter === 0) {
+                gameState.player.equipment.light.life -= 1;
+                if (gameState.player.equipment.light.life <= 0) {
+                    gameState.player.torchActive = false;
+                    gameState.player.equipment.light = null;
+                    logMessage("Your torch has sputtered out and turned to ash!", "text-red-500 blink font-bold");
+                    if (window.renderMap) window.renderMap();
+                }
+            }
+        }
+    }, 1000);
 }

@@ -2,7 +2,7 @@
 import { gameState, passiveRank } from "../core/state.js";
 import { TERRAIN, LOCAL_TILES } from "../data/terrain.js";
 import { WORLD_SIZE, LOCAL_SIZE, VIEW_RADIUS } from "../data/constants.js";
-import { updateTimeUI } from "../core/time.js";
+import { updateTimeUI, isWorldNight } from "../core/time.js";
 
 export function updateStatus() {
     let player = gameState.player;
@@ -32,7 +32,7 @@ export function renderMap() {
     
     if (!mapData) return;
 
-    let isNight = (player.time % 1440) >= 1080 || (player.time % 1440) < 360; 
+    let isNight = isWorldNight(); 
     let isDarkArea = !inWorld && (gameState.localMaps[player.zone]?.type === 'D' || gameState.localMaps[player.zone]?.type === '*');
     let effectivelyNight = isNight || isDarkArea;
 

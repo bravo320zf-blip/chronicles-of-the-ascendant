@@ -16,7 +16,6 @@ export function registerAction() {
     if (!player.activeBuffs) player.activeBuffs = {};
     
     player.actionCount++;
-    player.time = (player.time + 2) % 1440;
     
     if (player.torchActive) {
         if (player.equipment && player.equipment.light) {

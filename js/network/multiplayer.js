@@ -3,7 +3,7 @@ import { db, isOfflineMode, doc, setDoc, collection, onSnapshot, serverTimestamp
 import { gameState } from "../core/state.js";
 import { APP_ID } from "../data/constants.js";
 import { logMessage } from "../ui/log.js";
-import { getGlobalWorldTimeMinutes, updateTimeUI } from "../core/time.js";
+import { getGlobalWorldTimeMinutes, updateTimeUI, setServerTimeOffset } from "../core/time.js";
 import { renderMap } from "../ui/renderer.js";
 
 let presenceUnsubscribe = null;
@@ -204,32 +204,46 @@ function updateOnlinePlayersCount() {
     }
 }
 
-// Synchronized World Clock ("The World Always Running")
+// Server-Synchronized World Clock ("The World Always Running")
 function initWorldClockSync() {
-    // Synchronize initial clock to shared epoch
-    gameState.player.time = getGlobalWorldTimeMinutes();
-    updateTimeUI();
+    if (isOfflineMode || !db) return;
 
-    // Check clock every 5 seconds
-    worldClockInterval = setInterval(() => {
-        if (!gameState.player || !gameState.player.name) return;
-        
-        let newGlobalTime = getGlobalWorldTimeMinutes();
-        let wasNight = (gameState.player.time % 1440) >= 1080 || (gameState.player.time % 1440) < 360;
-        let isNight = (newGlobalTime % 1440) >= 1080 || (newGlobalTime % 1440) < 360;
+    try {
+        const clockDocRef = doc(db, 'artifacts', APP_ID, 'world', 'clock');
 
-        gameState.player.time = newGlobalTime;
-        updateTimeUI();
+        // Listen for authoritative server time updates from Firebase
+        onSnapshot(clockDocRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.serverTime) {
+                    const serverMs = typeof data.serverTime.toMillis === 'function' 
+                        ? data.serverTime.toMillis() 
+                        : (data.serverTime.seconds ? data.serverTime.seconds * 1000 : Date.now());
+                    const offset = serverMs - Date.now();
+                    setServerTimeOffset(offset);
+                }
+            }
+        }, (err) => {
+            console.warn("Server clock snapshot listener notice:", err);
+        });
 
-        // Broadcast day / night shifts
-        if (!wasNight && isNight) {
-            logMessage("Night falls across the realm. Darkness blankets the land.", "text-blue-300");
-            renderMap();
-        } else if (wasNight && !isNight) {
-            logMessage("The sun rises above the horizon. A new day begins.", "text-yellow-300");
-            renderMap();
-        }
-    }, 5000);
+        // Periodic server heartbeat write (every 60s) to keep server time anchored
+        syncServerTimestamp();
+        worldClockInterval = setInterval(syncServerTimestamp, 60000);
+    } catch (err) {
+        console.warn("Could not start server clock sync:", err);
+    }
+}
+
+async function syncServerTimestamp() {
+    if (isOfflineMode || !db) return;
+    try {
+        const clockDocRef = doc(db, 'artifacts', APP_ID, 'world', 'clock');
+        await setDoc(clockDocRef, {
+            serverTime: serverTimestamp(),
+            lastSyncUser: gameState.currentUser?.uid || 'guest'
+        }, { merge: true });
+    } catch (e) {}
 }
 
 // Offline Simulated Adventurers for local testing
