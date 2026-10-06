@@ -12,6 +12,7 @@ import { registerAction, hasLineOfSight, updateProjectiles, resolveSkillHit, tri
 import { calculateStats, renderInventory, closeInventory, sortInventory, useItem, equipItem, unequipItem, sellItem, renderEquipment, renderCrafting, selectRecipe, craftItem, depositItem, withdrawItem, handleGoldStash, gainProfessionXP } from "./core/inventory.js";
 import { toggleModal, renderStats, renderJournal, renderStash, renderSkills, unlockSkill, upgradeSkill, assignHotkey, renderPassives, upgradePassive } from "./ui/modals.js";
 import { showAuthModal, showCharSelectModal, showCharCreationModal, showMainGame, initAuthUIEvents, updateAccountBadge } from "./ui/authUI.js";
+import { openPlayerInteraction, closePlayerInteraction, inviteToParty, startTrade, cancelTrade, showEmoteList, performEmote, initTradeEventListeners } from "./ui/trade.js";
 import { CITIES } from "./data/worldData.js";
 import { MATERIALS, generateRandomItem } from "./data/items.js";
 import { LOCAL_TILES } from "./data/terrain.js";
@@ -55,6 +56,18 @@ window.triggerLocalCombat = triggerLocalCombat;
 window.generateBuildingInterior = generateBuildingInterior;
 window.generateArena = generateArena;
 window.calculateStats = calculateStats;
+window.openPlayerInteraction = openPlayerInteraction;
+window.closePlayerInteraction = closePlayerInteraction;
+window.inviteToParty = inviteToParty;
+window.startTrade = startTrade;
+window.cancelTrade = cancelTrade;
+window.showEmoteList = showEmoteList;
+window.performEmote = performEmote;
+window.switchCharacter = async function() {
+    await flushSave();
+    const chars = await loadUserCharacters(gameState.currentUser?.uid);
+    showCharSelectModal(chars);
+};
 
 // ==========================================
 // MOVEMENT CONTROLLER
@@ -63,6 +76,27 @@ window.movePlayer = function(dx, dy) {
     let player = gameState.player;
     if (player.hp <= 0 || player.inCombat || gameState.isAnimating) return;
     if (player.activeDialogue) { player.activeDialogue = null; logMessage("Conversation ended.", "system"); }
+
+    // Check for bumping into another online player
+    const targetX = player.zone === 'world' ? (player.worldX + dx) : (player.localX + dx);
+    const targetY = player.zone === 'world' ? (player.worldY + dy) : (player.localY + dy);
+
+    let bumpedPlayer = null;
+    for (let [uid, op] of gameState.onlinePlayers.entries()) {
+        if (op.zone === player.zone) {
+            let opX = player.zone === 'world' ? op.worldX : op.localX;
+            let opY = player.zone === 'world' ? op.worldY : op.localY;
+            if (opX === targetX && opY === targetY) {
+                bumpedPlayer = op;
+                break;
+            }
+        }
+    }
+
+    if (bumpedPlayer) {
+        openPlayerInteraction(bumpedPlayer);
+        return;
+    }
 
     if (player.zone === 'world') {
         let nx = player.x + dx; 
@@ -481,12 +515,22 @@ function initCommandInput() {
 // ==========================================
 function initKeyboardControls() {
     document.addEventListener('keydown', (e) => {
-        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || gameState.isAnimating) return;
+        if ((document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) || gameState.isAnimating) return;
         let player = gameState.player;
         
+        const k = e.key.toLowerCase();
+        const handledGameKeys = [
+            'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'space',
+            'c', 'i', 's', 'a', 'j', 'r', 'p', 'g', 'f', 'q', 'e', 'escape'
+        ];
+
+        // Prevent browser default behavior (focus cycling between buttons, container & page scrolling)
+        if (handledGameKeys.includes(k) || e.key.startsWith('Arrow')) {
+            e.preventDefault();
+        }
+
         // --- TARGETING MODE OVERRIDES ---
         if (player.targetingMode) {
-            e.preventDefault();
             if (e.key === 'Escape') {
                 logMessage("Targeting cancelled.", "text-gray-400");
                 player.targetingMode = false;
@@ -525,7 +569,7 @@ function initKeyboardControls() {
         }
 
         // --- STANDARD CONTROLS ---
-        switch(e.key.toLowerCase()) {
+        switch(k) {
             case 'arrowup': movePlayer(0, -1); break;
             case 'arrowdown': movePlayer(0, 1); break;
             case 'arrowleft': movePlayer(-1, 0); break;
@@ -542,10 +586,21 @@ function initKeyboardControls() {
             case 'q': if(player.hotkeys && player.hotkeys.q) useActiveSkill(player.hotkeys.q); break;
             case 'e': if(player.hotkeys && player.hotkeys.e) useActiveSkill(player.hotkeys.e); break;
             case 'escape':
-                ['stats-modal', 'inventory-modal', 'skills-modal', 'crafting-modal', 'passive-modal', 'journal-modal', 'stash-modal', 'settings-modal'].forEach(m => {
+                ['stats-modal', 'inventory-modal', 'skills-modal', 'crafting-modal', 'passive-modal', 'journal-modal', 'stash-modal', 'settings-modal', 'player-interact-modal', 'trade-modal'].forEach(m => {
                     document.getElementById(m)?.classList.add('hidden-ui');
                 });
                 break;
+        }
+    });
+
+    // Automatically blur buttons on click so they do not retain spatial focus / jump cursor
+    document.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            setTimeout(() => {
+                if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+                    document.activeElement.blur();
+                }
+            }, 10);
         }
     });
 }
@@ -554,8 +609,20 @@ function initKeyboardControls() {
 // CHARACTER CREATION SUBMISSION
 // ==========================================
 function initCharacterCreation() {
+    // Dynamic avatar glyph preview
+    document.getElementById('cc-symbol')?.addEventListener('change', (e) => {
+        const preview = document.getElementById('cc-symbol-preview');
+        if (preview) preview.innerText = e.target.value;
+    });
+
     document.getElementById('btn-start-game')?.addEventListener('click', async () => {
         try {
+            const chars = await loadUserCharacters(gameState.currentUser?.uid);
+            if (chars.length >= 5) {
+                alert("Account has reached maximum limit of 5 characters. Delete an existing adventurer to forge a new one.");
+                return;
+            }
+
             const name = document.getElementById('cc-name').value.replace(/[<>&"]/g, '').trim().slice(0, 20);
             if (!name) {
                 alert("Please enter a character name!");
@@ -564,6 +631,8 @@ function initCharacterCreation() {
 
             let newChar = createDefaultPlayer();
             newChar.name = name;
+            newChar.symbol = document.getElementById('cc-symbol')?.value || '@';
+            newChar.party = [];
             newChar.backstory = document.getElementById('cc-backstory').value.trim();
             let cityIdx = parseInt(document.getElementById('cc-city')?.value);
             if (isNaN(cityIdx) || cityIdx < 0 || cityIdx >= CITIES.length) cityIdx = 4;
@@ -620,11 +689,7 @@ function initCharacterCreation() {
 
     document.getElementById('btn-cancel-char-create')?.addEventListener('click', async () => {
         const chars = await loadUserCharacters(gameState.currentUser?.uid);
-        if (chars.length > 0) {
-            showCharSelectModal(chars);
-        } else {
-            showAuthModal();
-        }
+        showCharSelectModal(chars);
     });
 }
 
@@ -636,25 +701,18 @@ window.addEventListener('DOMContentLoaded', () => {
     initKeyboardControls();
     initAuthUIEvents();
     initCharacterCreation();
+    initTradeEventListeners();
     startTimeLoop();
     initMultiplayer();
 
-    // Start Authentication Flow
+    // Start Authentication Flow - Always display Character Selection Modal on login
     initAuthListener(async (user) => {
         updateAccountBadge();
         if (!user) {
             showAuthModal();
         } else {
             const characters = await loadUserCharacters(user.uid);
-            if (characters.length === 0) {
-                showCharCreationModal();
-            } else if (characters.length === 1 && !gameState.activeCharacterId) {
-                // If single legacy character, auto-load or offer character select
-                activateCharacter(characters[0]);
-                showMainGame();
-            } else if (!gameState.activeCharacterId) {
-                showCharSelectModal(characters);
-            }
+            showCharSelectModal(characters);
         }
     });
 });

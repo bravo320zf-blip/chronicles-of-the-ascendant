@@ -61,7 +61,8 @@ export function renderMap() {
 
             // Current Player
             if (x === px && y === py) {
-                asciiHTML += `<span class="map-tile map-player" title="You (${player.name})">@</span>`;
+                let heroChar = player.symbol || '@';
+                asciiHTML += `<span class="map-tile map-player text-white font-bold" title="You (${player.name})">${heroChar}</span>`;
                 continue;
             }
 
@@ -79,7 +80,10 @@ export function renderMap() {
             }
 
             if (otherPlayer) {
-                asciiHTML += `<span class="map-tile map-online-player blink" title="Player: ${otherPlayer.name} (Lvl ${otherPlayer.level || 1})">@</span>`;
+                const isPartied = (player.party && (player.party.includes(otherPlayer.uid) || player.party.includes(otherPlayer.name)));
+                const pColorClass = isPartied ? "map-party-player text-white font-bold" : "map-online-player text-green-400 font-bold";
+                const pChar = otherPlayer.symbol || '@';
+                asciiHTML += `<span class="map-tile ${pColorClass} cursor-pointer" title="${otherPlayer.name}">${pChar}</span>`;
                 continue;
             }
 
@@ -107,14 +111,19 @@ export function renderMap() {
                                 if (isBottomRight) {
                                     let cityNPCs = gameState.npcs[`${poiObj.rootX},${poiObj.rootY}`] || [];
                                     let hasTurnIn = false;
+                                    let hasActiveQuest = false;
                                     for (let npc of cityNPCs) {
                                         if (npc.questToGive && player.quests) {
                                             let q = player.quests.find(q => q.id === npc.questToGive.id);
                                             if (q && q.isComplete && !q.isTurnedIn) hasTurnIn = true;
+                                            else if (q && !q.isComplete && !q.isTurnedIn) hasActiveQuest = true;
                                         }
                                     }
                                     if (hasTurnIn) {
-                                        asciiHTML += `<span class="map-tile text-yellow-400 font-bold blink" title="Quest Ready to Turn In">⚑</span>`;
+                                        asciiHTML += `<span class="map-tile pulsing-yellow-npc font-bold" title="Quest Ready to Turn In">⚑</span>`;
+                                        continue;
+                                    } else if (hasActiveQuest) {
+                                        asciiHTML += `<span class="map-tile text-orange-400 font-bold" title="Quest in Progress">⚑</span>`;
                                         continue;
                                     }
                                 }
@@ -145,18 +154,27 @@ export function renderMap() {
                     }
 
                     let lObj = LOCAL_TILES[tile] || { color: '#fff', char: tile };
-                    let c = tile === 'B' ? 'map-dungeon blink' : (tile === 'M' ? 'text-cyan-400 font-bold' : (tile === 'N' ? 'map-city' : ''));
+                    let c = tile === 'B' ? 'map-dungeon blink' : '';
                     let tileColor = lObj.color;
                     let bgStyle = "";
                     
                     if (tile === 'N' || tile === 'M') {
-                        let entity = gameState.localMaps[player.zone].entities[`${x},${y}`];
-                        if (entity && entity.type === 'npc' && entity.data.questToGive && player.quests) {
-                            let q = player.quests.find(q => q.id === entity.data.questToGive.id);
-                            if (q && q.isComplete && !q.isTurnedIn) {
-                                tileColor = '#ffd700';
-                                c = 'font-bold blink';
-                            }
+                        let entity = gameState.localMaps[player.zone]?.entities?.[`${x},${y}`];
+                        let qId = entity?.data?.questToGive?.id;
+                        let playerQuest = (qId && player.quests) ? player.quests.find(q => q.id === qId) : null;
+
+                        if (playerQuest && playerQuest.isComplete && !playerQuest.isTurnedIn) {
+                            // Completed quest ready to turn in: Pulsing Yellow
+                            tileColor = '#fef08a';
+                            c = 'pulsing-yellow-npc font-bold';
+                        } else if (playerQuest && !playerQuest.isComplete && !playerQuest.isTurnedIn) {
+                            // Currently working on a quest for this NPC: Orange
+                            tileColor = '#fb923c';
+                            c = 'text-orange-400 font-bold';
+                        } else {
+                            // Default NPC: Yellow
+                            tileColor = '#facc15';
+                            c = 'text-yellow-400 font-bold';
                         }
                     }
 

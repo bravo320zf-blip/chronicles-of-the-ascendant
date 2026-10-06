@@ -72,71 +72,74 @@ export function showMainGame() {
     broadcastPresence();
 }
 
-export function renderCharacterList(characters) {
+export function renderCharacterList(characters = []) {
     const listContainer = document.getElementById('char-slots-list');
     if (!listContainer) return;
     listContainer.innerHTML = '';
 
-    if (!characters || characters.length === 0) {
-        listContainer.innerHTML = `
-            <div class="col-span-full text-center py-8 text-gray-400">
-                <p class="mb-4">No characters found for this account.</p>
-                <button id="btn-create-first-char" class="btn-term text-cyan-400 border-cyan-700 hover:bg-cyan-900/30">Create Your First Adventurer</button>
-            </div>
-        `;
-        document.getElementById('btn-create-first-char')?.addEventListener('click', showCharCreationModal);
-        return;
-    }
-
-    characters.forEach((char) => {
-        const city = CITIES[char.boundCity] || CITIES[0];
+    const TOTAL_SLOTS = 5;
+    for (let slotIdx = 0; slotIdx < TOTAL_SLOTS; slotIdx++) {
+        const char = characters[slotIdx];
         const card = document.createElement('div');
-        card.className = "char-slot-card panel p-4 flex flex-col justify-between";
-        card.innerHTML = `
-            <div>
-                <div class="flex justify-between items-start mb-2 border-b border-green-900 pb-2">
-                    <span class="text-lg font-bold text-green-400">${char.name}</span>
-                    <span class="text-xs uppercase bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-800">Lvl ${char.level || 1} ${char.loadout || 'Adventurer'}</span>
-                </div>
-                <div class="text-xs text-gray-400 space-y-1 mb-4">
-                    <div><span class="text-gray-500">Origin City:</span> ${city.name}</div>
-                    <div><span class="text-gray-500">Gold:</span> <span class="text-yellow-400">${char.gold || 0}g</span></div>
-                    <div><span class="text-gray-500">HP:</span> ${Math.floor(char.hp || 100)}/${char.maxHp || 100} | <span class="text-gray-500">MP:</span> ${Math.floor(char.mp || 50)}/${char.maxMp || 50}</div>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <button class="btn-term flex-1 py-1 text-xs text-cyan-400 border-cyan-800 hover:bg-cyan-900/40 font-bold" data-enter="${char.id}">ENTER WORLD</button>
-                <button class="btn-term px-3 py-1 text-xs text-red-500 border-red-900 hover:bg-red-900/40" data-del="${char.id}">DEL</button>
-            </div>
-        `;
 
-        card.querySelector('[data-enter]')?.addEventListener('click', () => {
-            activateCharacter(char);
-            showMainGame();
-            logMessage(`Welcome back, ${char.name}.`, "success");
-        });
+        if (char) {
+            const city = CITIES[char.boundCity] || CITIES[0];
+            card.className = "char-slot-card panel p-4 flex flex-col justify-between";
+            card.innerHTML = `
+                <div>
+                    <div class="flex justify-between items-start mb-2 border-b border-green-900 pb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded border border-green-500 bg-black flex items-center justify-center font-bold text-lg text-white shadow-sm">${char.symbol || '@'}</span>
+                            <div>
+                                <span class="text-base font-bold text-green-400 block">${char.name}</span>
+                                <span class="text-[10px] text-gray-500 uppercase font-mono tracking-wider">Slot ${slotIdx + 1}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs uppercase bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-800">Lvl ${char.level || 1} ${char.loadout || 'Adventurer'}</span>
+                    </div>
+                    <div class="text-xs text-gray-400 space-y-1 mb-4">
+                        <div><span class="text-gray-500">Origin City:</span> ${city.name}</div>
+                        <div><span class="text-gray-500">Gold:</span> <span class="text-yellow-400">${char.gold || 0}g</span></div>
+                        <div><span class="text-gray-500">HP:</span> ${Math.floor(char.hp || 100)}/${char.maxHp || 100} | <span class="text-gray-500">MP:</span> ${Math.floor(char.mp || 50)}/${char.maxMp || 50}</div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn-term flex-1 py-1 text-xs text-cyan-400 border-cyan-800 hover:bg-cyan-900/40 font-bold" data-enter="${char.id}">ENTER WORLD</button>
+                    <button class="btn-term px-3 py-1 text-xs text-red-500 border-red-900 hover:bg-red-900/40" data-del="${char.id}">DEL</button>
+                </div>
+            `;
 
-        card.querySelector('[data-del]')?.addEventListener('click', async () => {
-            if (confirm(`Are you sure you want to delete ${char.name}?`)) {
-                await deleteCharacter(char.id);
-                const updated = await loadUserCharacters(gameState.currentUser?.uid);
-                renderCharacterList(updated);
-            }
-        });
+            card.querySelector('[data-enter]')?.addEventListener('click', () => {
+                activateCharacter(char);
+                showMainGame();
+                logMessage(`Welcome back, ${char.name}.`, "success");
+            });
+
+            card.querySelector('[data-del]')?.addEventListener('click', async () => {
+                if (confirm(`Are you sure you want to delete ${char.name}?`)) {
+                    await deleteCharacter(char.id);
+                    const updated = await loadUserCharacters(gameState.currentUser?.uid);
+                    renderCharacterList(updated);
+                }
+            });
+        } else {
+            // Empty Slot
+            card.className = "panel p-6 flex flex-col items-center justify-center border-dashed border-gray-700 hover:border-green-500 cursor-pointer text-gray-400 hover:text-green-400 transition-colors min-h-[160px]";
+            card.innerHTML = `
+                <span class="text-xs text-gray-600 uppercase font-mono tracking-widest mb-1">Slot ${slotIdx + 1}: Empty</span>
+                <span class="text-3xl mb-1 text-green-400">+</span>
+                <span class="text-xs font-bold tracking-widest uppercase">Create New Adventurer</span>
+            `;
+            card.addEventListener('click', () => {
+                if (characters.length >= TOTAL_SLOTS) {
+                    alert("Account has reached maximum of 5 characters.");
+                    return;
+                }
+                showCharCreationModal();
+            });
+        }
 
         listContainer.appendChild(card);
-    });
-
-    // Add Create Character Slot button if less than 6 slots
-    if (characters.length < 6) {
-        const addCard = document.createElement('div');
-        addCard.className = "panel p-6 flex flex-col items-center justify-center border-dashed border-gray-700 hover:border-green-500 cursor-pointer text-gray-400 hover:text-green-400 transition-colors";
-        addCard.innerHTML = `
-            <span class="text-3xl mb-2">+</span>
-            <span class="text-sm font-bold tracking-widest uppercase">Create New Adventurer</span>
-        `;
-        addCard.addEventListener('click', showCharCreationModal);
-        listContainer.appendChild(addCard);
     }
 }
 

@@ -63,6 +63,8 @@ export async function broadcastPresence() {
         await setDoc(presDoc, {
             uid: user.uid,
             name: player.name,
+            symbol: player.symbol || '@',
+            party: player.party || [],
             level: player.level || 1,
             loadout: player.loadout || 'adventurer',
             zone: player.zone,
@@ -249,9 +251,9 @@ async function syncServerTimestamp() {
 // Offline Simulated Adventurers for local testing
 function initSimulatedAdventurers() {
     const fakeAdventurers = [
-        { uid: 'sim_1', name: 'Sir Galahad', level: 3, loadout: 'warrior', zone: 'world', worldX: 27, worldY: 26 },
-        { uid: 'sim_2', name: 'Morrigan', level: 5, loadout: 'mage', zone: 'world', worldX: 24, worldY: 27 },
-        { uid: 'sim_3', name: 'Shadowblade', level: 2, loadout: 'rogue', zone: 'world', worldX: 26, worldY: 24 }
+        { uid: 'sim_1', name: 'Sir Galahad', symbol: '@', level: 3, loadout: 'warrior', zone: 'world', worldX: 27, worldY: 26 },
+        { uid: 'sim_2', name: 'Morrigan', symbol: '✦', level: 5, loadout: 'mage', zone: 'world', worldX: 24, worldY: 27 },
+        { uid: 'sim_3', name: 'Shadowblade', symbol: '⚔', level: 2, loadout: 'rogue', zone: 'world', worldX: 26, worldY: 24 }
     ];
 
     fakeAdventurers.forEach(adv => gameState.onlinePlayers.set(adv.uid, adv));

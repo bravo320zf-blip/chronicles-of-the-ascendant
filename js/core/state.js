@@ -18,6 +18,8 @@ export function createDefaultPlayer() {
     return {
         id: 'char_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
         name: "",
+        symbol: "@",
+        party: [],
         backstory: "",
         loadout: "warrior",
         level: 1,
