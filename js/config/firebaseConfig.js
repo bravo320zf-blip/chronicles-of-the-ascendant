@@ -39,12 +39,13 @@ try {
 
 // Default config template. Users can replace these values or configure them in-game!
 export const firebaseConfig = userConfig || {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "your-game.firebaseapp.com",
-    projectId: "your-game-id",
-    storageBucket: "your-game.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef"
+    apiKey: "AIzaSyBA0QK49Bk09k8Hpm0UGeu3SaTpzpVsCY8",
+    authDomain: "chronicles-of-the-ascendant.firebaseapp.com",
+    projectId: "chronicles-of-the-ascendant",
+    storageBucket: "chronicles-of-the-ascendant.firebasestorage.app",
+    messagingSenderId: "1053462129131",
+    appId: "1:1053462129131:web:e3f6308fa7753c2a8ed1ae",
+    measurementId: "G-MP8J7F3EDV"
 };
 
 let app = null;
