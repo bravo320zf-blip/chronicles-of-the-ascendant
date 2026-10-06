@@ -1,9 +1,10 @@
 // Authentication and Character Selection / Creation UI
 import { gameState } from "../core/state.js";
 import { signInWithEmail, signUpWithEmail, signInAsGuest, signOutUser } from "../network/auth.js";
-import { loadUserCharacters, activateCharacter, deleteCharacter, flushSave } from "../network/characterSave.js";
+import { loadUserCharacters, activateCharacter, deleteCharacter, flushSave, updateCharacterRecord } from "../network/characterSave.js";
 import { isOfflineMode, firebaseConfig } from "../config/firebaseConfig.js";
 import { CITIES } from "../data/worldData.js";
+import { AVATAR_GLYPHS } from "../data/constants.js";
 import { generateWorld, enterLocalZone } from "../core/worldGen.js";
 import { renderMap } from "./renderer.js";
 import { logMessage } from "./log.js";
@@ -46,6 +47,7 @@ export function showMainGame() {
 
     let player = gameState.player;
     if (player) {
+        player.symbol = player.symbol || '@';
         // If player has a specific zone saved (e.g. city), re-enter or validate it
         if (player.zone && player.zone !== 'world') {
             let poiKey = player.zone.split('_')[0];
@@ -89,7 +91,7 @@ export function renderCharacterList(characters = []) {
                 <div>
                     <div class="flex justify-between items-start mb-2 border-b border-green-900 pb-2">
                         <div class="flex items-center gap-2">
-                            <span class="w-8 h-8 rounded border border-green-500 bg-black flex items-center justify-center font-bold text-lg text-white shadow-sm">${char.symbol || '@'}</span>
+                            <span id="char-badge-${char.id}" class="w-8 h-8 rounded border border-green-500 bg-black flex items-center justify-center font-bold text-lg text-white shadow-sm">${char.symbol || '@'}</span>
                             <div>
                                 <span class="text-base font-bold text-green-400 block">${char.name}</span>
                                 <span class="text-[10px] text-gray-500 uppercase font-mono tracking-wider">Slot ${slotIdx + 1}</span>
@@ -97,10 +99,16 @@ export function renderCharacterList(characters = []) {
                         </div>
                         <span class="text-xs uppercase bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-800">Lvl ${char.level || 1} ${char.loadout || 'Adventurer'}</span>
                     </div>
-                    <div class="text-xs text-gray-400 space-y-1 mb-4">
+                    <div class="text-xs text-gray-400 space-y-1 mb-3">
                         <div><span class="text-gray-500">Origin City:</span> ${city.name}</div>
                         <div><span class="text-gray-500">Gold:</span> <span class="text-yellow-400">${char.gold || 0}g</span></div>
                         <div><span class="text-gray-500">HP:</span> ${Math.floor(char.hp || 100)}/${char.maxHp || 100} | <span class="text-gray-500">MP:</span> ${Math.floor(char.mp || 50)}/${char.maxMp || 50}</div>
+                    </div>
+                    <div class="flex items-center gap-2 mb-3 bg-black/60 p-1.5 rounded border border-green-900/40">
+                        <label class="text-[10px] text-gray-400 uppercase font-mono whitespace-nowrap">Glyph:</label>
+                        <select class="char-glyph-select bg-black border border-green-800 text-green-400 text-xs p-1 outline-none font-mono flex-1" data-char-id="${char.id}">
+                            ${AVATAR_GLYPHS.map(g => `<option value="${g.glyph}" ${(char.symbol || '@') === g.glyph ? 'selected' : ''}>${g.label}</option>`).join('')}
+                        </select>
                     </div>
                 </div>
                 <div class="flex gap-2">
@@ -109,10 +117,23 @@ export function renderCharacterList(characters = []) {
                 </div>
             `;
 
+            card.querySelector('.char-glyph-select')?.addEventListener('change', async (e) => {
+                const newSym = e.target.value;
+                char.symbol = newSym;
+                const badge = card.querySelector(`#char-badge-${char.id}`);
+                if (badge) badge.innerText = newSym;
+                await updateCharacterRecord(char);
+                if (gameState.player && gameState.player.id === char.id) {
+                    gameState.player.symbol = newSym;
+                    if (window.renderMap) window.renderMap();
+                    broadcastPresence();
+                }
+            });
+
             card.querySelector('[data-enter]')?.addEventListener('click', () => {
                 activateCharacter(char);
                 showMainGame();
-                logMessage(`Welcome back, ${char.name}.`, "success");
+                logMessage(`Welcome back, ${char.name}. (Avatar: "${char.symbol || '@'}")`, "success");
             });
 
             card.querySelector('[data-del]')?.addEventListener('click', async () => {

@@ -2,8 +2,10 @@
 import { gameState, passiveRank } from "../core/state.js";
 import { ACTIVES, PASSIVES } from "../data/skills.js";
 import { ASCII_ITEMS } from "../data/items.js";
+import { AVATAR_GLYPHS } from "../data/constants.js";
 import { logMessage } from "./log.js";
 import { renderInventory, closeInventory, renderCrafting, calculateStats, depositItem, withdrawItem } from "../core/inventory.js";
+import { broadcastPresence } from "../network/multiplayer.js";
 
 export function toggleModal(id) {
     const modal = document.getElementById(id);
@@ -32,6 +34,19 @@ export function renderStats() {
             <div><span class="text-gray-400">Name:</span> <span class="text-green-400 font-bold">${player.name}</span></div>
             <div><span class="text-gray-400">Class:</span> <span class="text-green-400 font-bold capitalize">${player.loadout || 'Adventurer'}</span></div>
             
+            <div class="col-span-2 border-t border-green-900/50 mt-2 pt-2 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-400">Map Glyph:</span>
+                    <span class="w-8 h-8 rounded border border-green-500 bg-black flex items-center justify-center font-bold text-lg text-white shadow-sm">${player.symbol || '@'}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <select id="stat-symbol-select" class="bg-black border border-green-800 text-green-400 text-xs p-1 outline-none font-mono">
+                        ${AVATAR_GLYPHS.map(g => `<option value="${g.glyph}" ${(player.symbol || '@') === g.glyph ? 'selected' : ''}>${g.label}</option>`).join('')}
+                    </select>
+                    <button id="btn-save-stat-glyph" class="btn-term text-[11px] py-1 px-2 border-green-700 hover:bg-green-900/30 font-bold">SET</button>
+                </div>
+            </div>
+
             <div class="col-span-2 border-t border-green-900/50 mt-2 pt-2 text-cyan-500 font-bold uppercase tracking-widest text-xs">Base Attributes</div>
             
             <div><span class="text-gray-400">Strength:</span> <span class="text-white">${player.calcStats.str}</span> <span class="text-[10px] text-gray-500">(Base: ${player.baseStats.str})</span></div>
@@ -51,6 +66,25 @@ export function renderStats() {
             <div><span class="text-gray-400">Gold:</span> <span class="text-yellow-400">${player.gold}g</span></div>
         </div>
     `;
+
+    const updateGlyph = (newGlyph) => {
+        if (!newGlyph) return;
+        player.symbol = newGlyph;
+        if (window.renderMap) window.renderMap();
+        if (window.savePlayerData) window.savePlayerData();
+        broadcastPresence();
+        renderStats();
+        logMessage(`Map avatar glyph updated to "${player.symbol}".`, "success");
+    };
+
+    container.querySelector('#stat-symbol-select')?.addEventListener('change', (e) => {
+        updateGlyph(e.target.value);
+    });
+
+    container.querySelector('#btn-save-stat-glyph')?.addEventListener('click', () => {
+        const sel = container.querySelector('#stat-symbol-select');
+        if (sel) updateGlyph(sel.value);
+    });
 }
 
 export function renderJournal() {

@@ -17,7 +17,7 @@
 body {
     background-color: var(--term-bg);
     color: var(--term-fg);
-    font-family: 'Fira Code', monospace;
+    font-family: 'Fira Code', 'Segoe UI Symbol', 'Apple Color Emoji', monospace;
     overflow: hidden; 
     margin: 0;
     padding: 0;
@@ -71,9 +71,11 @@ body {
 
 .map-player { 
     color: #ffffff !important; 
-    font-weight: bold; 
+    font-weight: 900; 
     background-color: #000;
-    text-shadow: 0 0 5px #ffffff;
+    text-shadow: 0 0 6px #ffffff, 0 0 12px rgba(255, 255, 255, 0.9);
+    position: relative;
+    z-index: 5;
 }
 
 .map-party-player {

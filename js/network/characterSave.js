@@ -1,5 +1,5 @@
 // Character Save / Load Engine with Multi-Slot Support & Backward Compatibility
-import { db, isOfflineMode, doc, getDoc, setDoc, deleteDoc } from "../config/firebaseConfig.js";
+import { db, isOfflineMode, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "../config/firebaseConfig.js";
 import { gameState, TRANSIENT_STATE } from "../core/state.js";
 import { APP_ID, SAVE_VERSION } from "../data/constants.js";
 import { calculateStats } from "../core/inventory.js";
@@ -21,6 +21,8 @@ export async function flushSave() {
     try {
         const cleanData = JSON.parse(JSON.stringify({ 
             ...player, 
+            symbol: player.symbol || '@',
+            party: player.party || [],
             ...TRANSIENT_STATE, 
             saveVersion: SAVE_VERSION, 
             updatedAt: Date.now() 
@@ -42,12 +44,38 @@ export async function flushSave() {
         const charDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'characters', player.id || 'default');
         await setDoc(charDocRef, cleanData);
 
-        // 2. Also update primary user document for backward compatibility with existing refactor saves!
+        // 2. Also update primary user document for backward compatibility
         const legacyDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid);
         await setDoc(legacyDocRef, { player: cleanData }, { merge: true });
 
     } catch (e) {
         console.error("Save failed:", e);
+    }
+}
+
+export async function updateCharacterRecord(charData) {
+    const user = gameState.currentUser;
+    if (!user || !charData || !charData.id) return;
+    try {
+        const cleanData = JSON.parse(JSON.stringify(charData));
+        cleanData.symbol = cleanData.symbol || '@';
+        cleanData.updatedAt = Date.now();
+
+        if (isOfflineMode || !db) {
+            let savedMap = JSON.parse(localStorage.getItem(`cota_characters_${user.uid}`) || '{}');
+            savedMap[charData.id] = cleanData;
+            localStorage.setItem(`cota_characters_${user.uid}`, JSON.stringify(savedMap));
+            return;
+        }
+
+        const charDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'characters', charData.id);
+        await setDoc(charDocRef, cleanData, { merge: true });
+
+        if (gameState.player && gameState.player.id === charData.id) {
+            gameState.player.symbol = cleanData.symbol;
+        }
+    } catch (e) {
+        console.error("Failed to update character record:", e);
     }
 }
 
@@ -64,26 +92,48 @@ export async function loadUserCharacters(uid) {
             let legacy = localStorage.getItem(`cota_player_${uid}`);
             if (legacy) {
                 let parsed = JSON.parse(legacy);
-                if (parsed.name) characters.push(parsed);
+                if (parsed.name) {
+                    if (!parsed.symbol) parsed.symbol = '@';
+                    characters.push(parsed);
+                }
             }
         }
         return characters;
     }
 
     try {
-        // First check for modern character slots in subcollection or user doc
-        // Note: In firestore, check user legacy document first to maintain backward compatibility
-        const legacyDocRef = doc(db, 'artifacts', APP_ID, 'users', uid);
-        const legacySnap = await getDoc(legacyDocRef);
+        // 1. Check multi-character slots subcollection in Firestore
+        const charColRef = collection(db, 'artifacts', APP_ID, 'users', uid, 'characters');
+        const snap = await getDocs(charColRef);
         
-        if (legacySnap.exists()) {
-            const data = legacySnap.data();
-            if (data.player && data.player.name) {
-                characters.push(data.player);
+        if (!snap.empty) {
+            snap.forEach(docSnap => {
+                const cData = docSnap.data();
+                if (cData && cData.name) {
+                    if (!cData.symbol) cData.symbol = '@';
+                    characters.push(cData);
+                }
+            });
+        }
+
+        // 2. Backward compatibility fallback: check legacy user document if subcollection was empty
+        if (characters.length === 0) {
+            const legacyDocRef = doc(db, 'artifacts', APP_ID, 'users', uid);
+            const legacySnap = await getDoc(legacyDocRef);
+            
+            if (legacySnap.exists()) {
+                const data = legacySnap.data();
+                if (data.player && data.player.name) {
+                    if (!data.player.symbol) data.player.symbol = '@';
+                    characters.push(data.player);
+
+                    // Auto-migrate legacy character into the subcollection
+                    const charDocRef = doc(db, 'artifacts', APP_ID, 'users', uid, 'characters', data.player.id || 'default');
+                    setDoc(charDocRef, data.player, { merge: true }).catch(() => {});
+                }
             }
         }
 
-        // Return characters list
         return characters;
     } catch (err) {
         console.warn("Could not load characters from Firebase, checking local storage:", err);
@@ -95,6 +145,10 @@ export async function loadUserCharacters(uid) {
 export function activateCharacter(characterData) {
     let player = JSON.parse(JSON.stringify(characterData));
     
+    // Ensure symbol and party are initialized
+    player.symbol = player.symbol || '@';
+    player.party = player.party || [];
+
     // Ensure world coordinates are always initialized
     if (player.worldX === undefined) player.worldX = player.x || 30;
     if (player.worldY === undefined) player.worldY = player.y || 30;
@@ -136,6 +190,13 @@ export async function deleteCharacter(charId) {
     try {
         const charDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'characters', charId);
         await deleteDoc(charDocRef);
+
+        // Also check if legacy player matched and delete/clear it
+        const legacyDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid);
+        const legacySnap = await getDoc(legacyDocRef);
+        if (legacySnap.exists() && legacySnap.data()?.player?.id === charId) {
+            await setDoc(legacyDocRef, { player: null }, { merge: true });
+        }
     } catch (e) {
         console.error("Delete failed:", e);
     }

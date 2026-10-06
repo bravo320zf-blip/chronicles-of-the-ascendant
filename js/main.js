@@ -610,10 +610,13 @@ function initKeyboardControls() {
 // ==========================================
 function initCharacterCreation() {
     // Dynamic avatar glyph preview
-    document.getElementById('cc-symbol')?.addEventListener('change', (e) => {
+    const symSelect = document.getElementById('cc-symbol');
+    const updatePreview = () => {
         const preview = document.getElementById('cc-symbol-preview');
-        if (preview) preview.innerText = e.target.value;
-    });
+        if (preview && symSelect) preview.innerText = symSelect.value;
+    };
+    symSelect?.addEventListener('change', updatePreview);
+    symSelect?.addEventListener('input', updatePreview);
 
     document.getElementById('btn-start-game')?.addEventListener('click', async () => {
         try {
@@ -629,9 +632,10 @@ function initCharacterCreation() {
                 return;
             }
 
+            const chosenSymbol = document.getElementById('cc-symbol')?.value || '@';
             let newChar = createDefaultPlayer();
             newChar.name = name;
-            newChar.symbol = document.getElementById('cc-symbol')?.value || '@';
+            newChar.symbol = chosenSymbol;
             newChar.party = [];
             newChar.backstory = document.getElementById('cc-backstory').value.trim();
             let cityIdx = parseInt(document.getElementById('cc-city')?.value);
@@ -676,6 +680,7 @@ function initCharacterCreation() {
             await flushSave();
             showMainGame();
             logMessage(`Welcome to the realm, ${name}.`, "success");
+            logMessage(`[Avatar]: Your map glyph is "${newChar.symbol}". (Press [C] anytime to change)`, "text-cyan-400");
         } catch (err) {
             console.error('Character start failed', err);
             const el = document.getElementById('cc-loading');
