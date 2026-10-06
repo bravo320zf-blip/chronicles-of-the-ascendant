@@ -138,6 +138,10 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
     }
+    // World Clock & State: Authenticated players can read and sync the server world clock
+    match /artifacts/chronicles-ascendant-mud/world/{docId} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
 ```
@@ -178,6 +182,7 @@ Type these into the command line at the bottom:
 - `/shout <message>`: Shout across the entire realm.
 - `/who`: List all online players, levels, and zones.
 - `/look`: Examine the current tile and list nearby adventurers.
+- `/time`: Inspect the current server synchronized world clock and day/night status.
 - `/gather`: Harvest surrounding resources.
 - `/rest`: Recover HP and MP out of combat.
 - `/torch`: Toggle torch lighting.
