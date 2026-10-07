@@ -56,10 +56,21 @@ export function showMainGame() {
                 enterLocalZone(poiKey, poi);
             } else {
                 player.zone = 'world';
-                player.x = player.worldX || 30;
-                player.y = player.worldY || 30;
+                let bound = CITIES[player.boundCity] || CITIES[4];
+                player.x = bound.x;
+                player.y = bound.y;
+                player.worldX = bound.x;
+                player.worldY = bound.y;
             }
         } else if (player.zone === 'world') {
+            let curTile = gameState.worldMap[player.y]?.[player.x];
+            if (!curTile || curTile === '~' || curTile === '#' || curTile === '▲') {
+                let bound = CITIES[player.boundCity] || CITIES[4];
+                player.x = bound.x;
+                player.y = bound.y;
+                player.worldX = bound.x;
+                player.worldY = bound.y;
+            }
             // If player is standing at a city coordinate, enter the city
             let curPOI = gameState.pois[`${player.x},${player.y}`];
             if (curPOI && curPOI.type === 'C') {

@@ -108,6 +108,8 @@ body {
 .map-dungeon { color: #f00; font-weight: bold; }
 .map-cave { color: #f80; }
 .map-fort { color: #a55; font-weight: bold; }
+.map-shrine { color: #fbbf24 !important; font-weight: bold; text-shadow: 0 0 8px #f59e0b, 0 0 16px #fbbf24; animation: npc-pulse-yellow 1.4s infinite alternate ease-in-out; }
+.map-bridge { color: #f59e0b !important; font-weight: bold; text-shadow: 0 0 4px rgba(245, 158, 11, 0.5); }
 
 .log-container {
     scrollbar-width: thin;

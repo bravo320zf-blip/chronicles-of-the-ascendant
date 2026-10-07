@@ -219,21 +219,13 @@ export function applyGuardDeathPenalty() {
 
     player.boundCity = closestCityId;
     logMessage(`Your respawn point has been forcibly relocated to ${CITIES[closestCityId].name}.`, "text-gray-400");
-
-    if (player.quests && player.quests.length > 0) {
-        let removed = 0;
-        player.quests = player.quests.filter(q => {
-            if (!q.isComplete && !q.isTurnedIn) { removed++; return false; }
-            return true;
-        });
-        if (removed > 0) logMessage(`All active quests have been abandoned!`, "text-red-400");
-    }
 }
 
 export function talkToNPC(npc) {
     let player = gameState.player;
-    player.activeDialogue = { npc: npc, state: 'root' };
-    logMessage(`[${npc.name} the ${npc.profession}]: "${npc.dialogue}"`, "npc");
+    player.activeDialogue = { npc: npc, state: 'root', options: [] };
+    let profTitle = npc.profession ? ` the ${npc.profession}` : '';
+    logMessage(`[${npc.name}${profTitle}]: "${npc.dialogue}"`, "npc");
     showDialogueOptions();
 }
 
@@ -243,31 +235,48 @@ export function showDialogueOptions() {
     if (!state) return;
     let npc = state.npc;
     
-    logMessage(`<span class="cursor-pointer text-yellow-400 hover:text-white underline decoration-dotted" data-dlg="story">[1] "Tell me about yourself."</span>`);
-    let optIndex = 2;
-    
+    state.options = [];
+
+    // 1. Personal Story
+    state.options.push({ key: 'story', label: `"Tell me about yourself."`, color: 'text-yellow-400 hover:text-white' });
+
+    // 2. World & Regional Lore
+    if (npc.lore) {
+        state.options.push({ key: 'lore', label: `"What can you tell me of this land and the Ascendant?"`, color: 'text-cyan-400 hover:text-white' });
+    }
+
+    // 3. Local Rumors & Secrets
+    if (npc.rumor) {
+        state.options.push({ key: 'rumor', label: `"Have you heard any rumors or secrets?"`, color: 'text-amber-400 hover:text-white' });
+    }
+
+    // 4. Quest Handling
     if (npc.questToGive && !npc.questToGive.isTurnedIn) {
         let playerHasQuest = player.quests && player.quests.find(q => q.id === npc.questToGive.id);
         
         if (!playerHasQuest) {
-            logMessage(`<span class="cursor-pointer text-yellow-400 hover:text-white underline decoration-dotted" data-dlg="take_quest">[${optIndex}] "Do you need any help?"</span>`);
-            optIndex++;
-        } else if (playerHasQuest && playerHasQuest.isComplete && !playerHasQuest.isTurnedIn) {
-            logMessage(`<span class="cursor-pointer text-green-400 font-bold hover:text-white underline decoration-dotted" data-dlg="turn_in_quest">[${optIndex}] "I finished your task. (Turn In)"</span>`);
-            optIndex++;
-        } else if (playerHasQuest && !playerHasQuest.isComplete) {
-            logMessage(`<span class="text-gray-500">[${optIndex}] (You are still working on their task...)</span>`);
-            optIndex++;
+            state.options.push({ key: 'take_quest', label: `"Do you need any help? (Quest)"`, color: 'text-yellow-300 font-bold hover:text-white' });
+        } else if (playerHasQuest.isComplete && !playerHasQuest.isTurnedIn) {
+            state.options.push({ key: 'turn_in_quest', label: `"I finished your task. (Complete Quest)"`, color: 'text-green-400 font-bold hover:text-white' });
+        } else if (!playerHasQuest.isComplete) {
+            state.options.push({ key: 'quest_status', label: `(Working on: ${playerHasQuest.title} - ${playerHasQuest.progress}/${playerHasQuest.maxProgress})`, color: 'text-gray-400 hover:text-gray-200' });
         }
     }
 
+    // 5. Vendor Options
     if (npc.isVendor) {
-        logMessage(`<span class="cursor-pointer text-yellow-400 hover:text-white underline decoration-dotted" data-dlg="buy">[${optIndex}] "Show me your wares."</span>`);
-        optIndex++;
-        logMessage(`<span class="cursor-pointer text-yellow-400 hover:text-white underline decoration-dotted" data-dlg="sell">[${optIndex}] "I want to sell items."</span>`);
-        optIndex++;
+        state.options.push({ key: 'buy', label: `"Show me your wares."`, color: 'text-yellow-400 hover:text-white' });
+        state.options.push({ key: 'sell', label: `"I want to sell items."`, color: 'text-yellow-400 hover:text-white' });
     }
-    logMessage(`<span class="cursor-pointer text-gray-400 hover:text-white underline decoration-dotted" data-dlg="exit">[${optIndex}] "Goodbye."</span>`);
+
+    // 6. Exit
+    state.options.push({ key: 'exit', label: `"Goodbye."`, color: 'text-gray-400 hover:text-white' });
+
+    // Render numbered options
+    state.options.forEach((opt, idx) => {
+        let num = idx + 1;
+        logMessage(`<span class="cursor-pointer ${opt.color} underline decoration-dotted" data-dlg="${opt.key}">[${num}] ${opt.label}</span>`);
+    });
 }
 
 export function handleDialogue(choice) {
@@ -277,42 +286,73 @@ export function handleDialogue(choice) {
     let npc = d.npc;
 
     if (d.state === 'root') {
-        if (choice === 'story') { 
-            logMessage(`[${npc.name}]: "${npc.backstory}"`, "npc"); 
+        // Map numeric choice to option key if needed
+        let key = choice;
+        if (typeof choice === 'number' && d.options && d.options[choice - 1]) {
+            key = d.options[choice - 1].key;
+        }
+
+        if (key === 'story') { 
+            logMessage(`[${npc.name}]: "${npc.backstory || 'I am just an adventurer in these troubled times.'}"`, "npc"); 
             showDialogueOptions(); 
         }
-        else if (choice === 'take_quest') {
+        else if (key === 'lore') {
+            logMessage(`[${npc.name}]: "${npc.lore || 'The realm of Aethelgard has forgotten much since the Fallen Star struck our skies.'}"`, "npc");
+            showDialogueOptions();
+        }
+        else if (key === 'rumor') {
+            logMessage(`[${npc.name}]: "${npc.rumor || 'Keep your blade sharp. The wild places are not kind.'}"`, "npc");
+            showDialogueOptions();
+        }
+        else if (key === 'take_quest') {
             if (!player.quests) player.quests = [];
             player.quests.push({...npc.questToGive});
             logMessage(`[${npc.name}]: "${npc.questToGive.desc}"`, "npc");
             logMessage(`*** New Quest Added: ${npc.questToGive.title} ***`, "text-yellow-400 font-bold");
+            logMessage(`Objective: Slay ${npc.questToGive.target} (0/${npc.questToGive.maxProgress}) | Rewards: ${npc.questToGive.rewardGold}g, ${npc.questToGive.rewardXp} XP`, "text-cyan-400 text-xs");
+            if (window.renderMap) window.renderMap();
             showDialogueOptions();
         }
-        else if (choice === 'turn_in_quest') {
+        else if (key === 'turn_in_quest') {
             let q = player.quests.find(x => x.id === npc.questToGive.id);
             if (q && q.isComplete) {
                 q.isTurnedIn = true;
                 npc.questToGive.isTurnedIn = true;
                 player.gold += q.rewardGold;
                 if (window.gainXP) window.gainXP(q.rewardXp);
-                logMessage(`[${npc.name}]: "You actually did it! Thank you! Here is your reward."`, "npc");
+
+                if (q.rewardItem) {
+                    player.inventory.push({ ...q.rewardItem });
+                    logMessage(`Received special item: [${q.rewardItem.name}]!`, "text-yellow-400 font-bold");
+                }
+
+                let reply = q.turnInDialogue || "You actually did it! Thank you! Here is your reward.";
+                logMessage(`[${npc.name}]: "${reply}"`, "npc");
                 logMessage(`Received ${q.rewardGold}g and ${q.rewardXp} XP!`, "success");
                 if (window.updateStatus) window.updateStatus();
                 if (window.renderMap) window.renderMap();
+                if (window.savePlayerData) window.savePlayerData();
             }
             showDialogueOptions();
         }
-        else if (choice === 'buy' && npc.isVendor) { 
+        else if (key === 'quest_status') {
+            let q = player.quests.find(x => x.id === npc.questToGive.id);
+            if (q) {
+                logMessage(`[${npc.name}]: "You still need to hunt down ${q.maxProgress - q.progress} more ${q.target}. Return when you have completed the task!"`, "npc");
+            }
+            showDialogueOptions();
+        }
+        else if (key === 'buy' && npc.isVendor) { 
             d.state = 'wares'; 
             showWares(npc); 
         }
-        else if (choice === 'sell' && npc.isVendor) { 
+        else if (key === 'sell' && npc.isVendor) { 
             player.sellingMode = true; 
             if (window.toggleModal) window.toggleModal('inventory-modal'); 
             const titleEl = document.getElementById('backpack-title');
             if (titleEl) titleEl.innerText = "Select Items to Sell";
         }
-        else if (choice === 'exit') { 
+        else if (key === 'exit') { 
             player.activeDialogue = null; 
             logMessage("Conversation ended.", "system"); 
         }

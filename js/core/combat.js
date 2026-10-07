@@ -1,6 +1,6 @@
 // Combat Engine, Projectiles, Targeting, Active Skills, and Passive Synergy
 import { gameState, passiveRank } from "./state.js";
-import { ENEMIES, ENEMY_STATS, ELITE_PREFIXES, BIOME_BOSSES, baseName } from "../data/worldData.js";
+import { ENEMIES, ENEMY_STATS, ELITE_PREFIXES, BIOME_BOSSES, baseName, getTileBiome } from "../data/worldData.js";
 import { ACTIVES } from "../data/skills.js";
 import { MATERIALS, generateRandomItem } from "../data/items.js";
 import { logMessage, playEncounterAnimation } from "../ui/log.js";
@@ -267,7 +267,8 @@ export function triggerCombat(tile) {
         return;
     }
     
-    let pool = ENEMIES[tile] || ENEMIES['P'];
+    let biome = getTileBiome(tile);
+    let pool = ENEMIES[biome] || ENEMIES['P'];
     let eName = pool[Math.floor(Math.random()*pool.length)];
     let stat = ENEMY_STATS[eName] || { hp: 30, damage: 5 };
     
@@ -406,13 +407,25 @@ export function handleCombatTurn(skipPlayerAttack = false) {
         
         if (player.quests) {
             player.quests.forEach(q => {
-                if (!q.isComplete && !q.isTurnedIn && (q.target === baseName(e.name) || q.target === 'Any')) {
-                    q.progress++;
-                    if (q.progress >= q.maxProgress) {
-                        q.isComplete = true;
-                        logMessage(`*** Quest Objective Complete: ${q.title} ***`, "text-yellow-400 font-bold blink");
-                    } else {
-                        logMessage(`Quest Progress: ${q.title} (${q.progress}/${q.maxProgress})`, "text-blue-400 text-xs");
+                if (!q.isComplete && !q.isTurnedIn) {
+                    let bName = baseName(e.name);
+                    let matched = false;
+                    if (q.target === 'Any' || q.target === bName) matched = true;
+                    else if (Array.isArray(q.targets) && q.targets.includes(bName)) matched = true;
+                    else if (typeof q.target === 'string' && q.target.includes('/')) {
+                        let parts = q.target.split('/').map(s => s.trim());
+                        if (parts.includes(bName)) matched = true;
+                    }
+
+                    if (matched) {
+                        q.progress++;
+                        if (q.progress >= q.maxProgress) {
+                            q.isComplete = true;
+                            logMessage(`*** Quest Objective Complete: ${q.title} ***`, "text-yellow-400 font-bold blink");
+                            logMessage(`Return to your patron in ${q.patronCity || 'the city'} to turn in your quest!`, "text-green-400 font-bold");
+                        } else {
+                            logMessage(`Quest Progress: ${q.title} (${q.progress}/${q.maxProgress})`, "text-blue-400 text-xs");
+                        }
                     }
                 }
             });

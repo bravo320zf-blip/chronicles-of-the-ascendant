@@ -1,22 +1,40 @@
 // World and Local Map Tile Dictionaries
 
 export const TERRAIN = {
-    'F': { name: 'Forest', color: '#228B22', char: ' ' },
-    'D': { name: 'Desert', color: '#BDB76B', char: ' ' },
-    'T': { name: 'Tundra', color: '#E0FFFF', char: ' ' },
-    'S': { name: 'Swamp', color: '#800080', char: ' ' },
-    'P': { name: 'Plains', color: '#9ACD32', char: ' ' },
-    '#': { name: 'Mountains', color: '#696969', char: '▲' },
-    't': { name: 'Tree', color: '#228B22', char: '♣' },
-    'l': { name: 'Leaves', color: '#228B22', char: '♣' },
-    's': { name: 'Shrub', color: '#32CD32', char: 'w' },
-    'c': { name: 'Cactus', color: '#32CD32', char: '╤' },
-    'r': { name: 'Rock', color: '#808080', char: 'o' },
-    'g': { name: 'Grass', color: '#9ACD32', char: '"' },
-    'w': { name: 'Water', color: '#4169E1', char: '~' },
-    'i': { name: 'Ice', color: '#ADD8E6', char: '∆' },
-    'd': { name: 'Dead Tree', color: '#696969', char: 'T' },
-    'Ω': { name: 'Ancient Shrine', color: '#ffd700', char: 'Ω' }
+    // Continents, Oceans & Coastal Geographies
+    '~': { name: 'Deep Ocean', color: '#1d4ed8', char: '~' },
+    'w': { name: 'Ocean / Water', color: '#2563eb', char: '~' },
+    '≈': { name: 'Coastal Sea / Shallows', color: '#38bdf8', char: '≈' },
+    '=': { name: 'Stone Bridge / Causeway', color: '#f59e0b', char: '=' },
+    '.': { name: 'Coast Sand / Dunes', color: '#eab308', char: '.' },
+    '"': { name: 'Rolling Plains', color: '#84cc16', char: '"' },
+    'g': { name: 'Lush Grass', color: '#84cc16', char: '"' },
+    '♣': { name: 'Ancient Forest', color: '#16a34a', char: '♣' },
+    't': { name: 'Elder Tree', color: '#15803d', char: '♣' },
+    'l': { name: 'Canopy Leaves', color: '#22c55e', char: '♣' },
+    's': { name: 'Verdant Shrub', color: '#4ade80', char: 'w' },
+    '▲': { name: 'High Mountain Peaks', color: '#9ca3af', char: '▲' },
+    '#': { name: 'Mountain Range', color: '#9ca3af', char: '▲' },
+    '^': { name: 'Foothills & Passes', color: '#6b7280', char: '^' },
+    'o': { name: 'Mesa / Boulders', color: '#78716c', char: 'o' },
+    'r': { name: 'Granite Rock', color: '#78716c', char: 'o' },
+    '╤': { name: 'Desert Cactus', color: '#22c55e', char: '╤' },
+    'c': { name: 'Cactus Cluster', color: '#22c55e', char: '╤' },
+    '∆': { name: 'Glacial Ice', color: '#a5f3fc', char: '∆' },
+    'i': { name: 'Ice Spire', color: '#a5f3fc', char: '∆' },
+    '*': { name: 'Arctic Snowfield', color: '#f0fdf4', char: '*' },
+    'p': { name: 'Swamp Mire', color: '#86198f', char: '≈' },
+    'v': { name: 'Volcanic Lava', color: '#ef4444', char: '≈' },
+    'T': { name: 'Deadwood / Blight', color: '#71717a', char: 'T' },
+    'd': { name: 'Deadwood', color: '#71717a', char: 'T' },
+    'Ω': { name: 'Ancient Shrine of the Ascendant', color: '#fbbf24', char: 'Ω' },
+
+    // Legacy Biome Characters (Fallback)
+    'F': { name: 'Forest', color: '#16a34a', char: '♣' },
+    'D': { name: 'Desert', color: '#ca8a04', char: '.' },
+    'T': { name: 'Tundra', color: '#a5f3fc', char: '∆' },
+    'S': { name: 'Swamp', color: '#a855f7', char: '≈' },
+    'P': { name: 'Plains', color: '#84cc16', char: '"' }
 };
 
 export const POI_TYPES = {

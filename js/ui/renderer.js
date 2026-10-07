@@ -135,7 +135,8 @@ export function renderMap() {
                         }
                     } else {
                         let tObj = TERRAIN[tile] || { color: '#fff', char: ' ' };
-                        asciiHTML += `<span class="map-tile" style="color: ${tObj.color}">${tObj.char}</span>`;
+                        let extraClass = tile === 'Ω' ? 'map-shrine' : (tile === '=' ? 'map-bridge' : '');
+                        asciiHTML += `<span class="map-tile ${extraClass}" style="color: ${tObj.color}" title="${tObj.name}">${tObj.char}</span>`;
                     }
                 } else {
                     // LOCAL MAP RENDERING

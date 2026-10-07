@@ -92,7 +92,7 @@ export function renderJournal() {
     const container = document.getElementById('journal-content');
     if (!container) return;
     if (!player.quests || player.quests.length === 0) {
-        container.innerHTML = `<div class="text-gray-500 text-center mt-10">Your journal is empty. Talk to NPCs in cities to find work.</div>`;
+        container.innerHTML = `<div class="text-gray-500 text-center mt-10">Your quest journal is currently empty.<br><span class="text-xs text-gray-600 mt-2 block">Speak with city leaders and citizens in Kingsfall, Oakhaven, Frosthold, and other realms to take on epic tasks.</span></div>`;
         return;
     }
 
@@ -101,31 +101,43 @@ export function renderJournal() {
         if (q.isTurnedIn) return; 
 
         let statusColor = q.isComplete ? 'text-green-400' : 'text-yellow-400';
-        let statusText = q.isComplete ? '(COMPLETE - Return to NPC)' : `(${q.progress}/${q.maxProgress})`;
+        let statusText = q.isComplete ? '★ READY FOR TURN IN' : `${q.progress} / ${q.maxProgress}`;
         let barWidth = Math.min(100, (q.progress / q.maxProgress) * 100);
+        let category = q.category || 'Regional Bounty';
 
         html += `
-            <div class="border border-blue-900/50 p-4 bg-black/60 mb-2">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-bold text-lg text-blue-400 tracking-wide">${q.title}</h3>
-                    <span class="${statusColor} font-bold text-xs uppercase">${statusText}</span>
+            <div class="border border-blue-900/50 p-4 bg-black/60 mb-3 rounded shadow-sm">
+                <div class="flex justify-between items-start mb-1">
+                    <div>
+                        <span class="text-[10px] uppercase font-mono tracking-wider px-1.5 py-0.5 rounded bg-blue-950 text-cyan-400 border border-blue-800">${category}</span>
+                        <h3 class="font-bold text-base text-white mt-1.5 tracking-wide">${q.title}</h3>
+                    </div>
+                    <span class="${statusColor} font-bold text-xs uppercase bg-black/80 px-2 py-1 border border-current rounded">${statusText}</span>
                 </div>
-                <p class="text-sm text-gray-400 italic mb-3">"${q.desc}"</p>
+                <p class="text-xs text-gray-300 italic mb-2 leading-relaxed">"${q.desc}"</p>
                 
-                <div class="w-full bg-gray-900 h-2 mb-3 border border-gray-700">
-                    <div class="${q.isComplete ? 'bg-green-500' : 'bg-yellow-500'} h-full" style="width: ${barWidth}%"></div>
+                <div class="flex justify-between text-[11px] text-gray-400 mb-1 font-mono">
+                    <span>Target: <strong class="text-yellow-400">${q.target}</strong></span>
+                    <span>Progress: ${q.progress}/${q.maxProgress}</span>
+                </div>
+                <div class="w-full bg-gray-900 h-2 mb-3 border border-gray-700 rounded overflow-hidden">
+                    <div class="${q.isComplete ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-yellow-500'} h-full transition-all duration-300" style="width: ${barWidth}%"></div>
                 </div>
                 
-                <div class="flex gap-4 text-xs font-bold uppercase tracking-widest text-gray-500 border-t border-blue-900/30 pt-2">
-                    <span>Rewards:</span>
-                    <span class="text-yellow-500">${q.rewardGold}g</span>
-                    <span class="text-purple-400">${q.rewardXp} XP</span>
+                <div class="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-gray-400 border-t border-blue-900/40 pt-2">
+                    <div class="flex gap-3 items-center">
+                        <span class="text-gray-500">Rewards:</span>
+                        <span class="text-yellow-400 font-mono">${q.rewardGold}g</span>
+                        <span class="text-purple-400 font-mono">+${q.rewardXp} XP</span>
+                        ${q.rewardItem ? `<span class="text-cyan-400 font-mono border border-cyan-800 px-1 py-0.5 rounded bg-cyan-950/40">[${q.rewardItem.name}]</span>` : ''}
+                    </div>
+                    ${q.patronCity ? `<span class="text-gray-500 text-[10px] font-mono">Patron in: ${q.patronCity}</span>` : ''}
                 </div>
             </div>
         `;
     });
     
-    if (html === '') html = `<div class="text-gray-500 text-center mt-10">No active tasks.</div>`;
+    if (html === '') html = `<div class="text-gray-500 text-center mt-10">No active tasks. Speak with city leaders to begin new quests.</div>`;
     container.innerHTML = html;
 }
 

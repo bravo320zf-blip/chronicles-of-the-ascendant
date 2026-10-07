@@ -101,7 +101,17 @@ window.movePlayer = function(dx, dy) {
     if (player.zone === 'world') {
         let nx = player.x + dx; 
         let ny = player.y + dy;
-        if (nx < 0 || nx >= WORLD_SIZE || ny < 0 || ny >= WORLD_SIZE || gameState.worldMap[ny][nx] === '#') return;
+        if (nx < 0 || nx >= WORLD_SIZE || ny < 0 || ny >= WORLD_SIZE) return;
+        
+        let destTile = gameState.worldMap[ny][nx];
+        if (destTile === '#' || destTile === '▲' || destTile === '~') {
+            if (destTile === '~') {
+                logMessage("The ocean depths are impassable on foot. Seek a bridge or coastal shallows.", "text-blue-400 text-xs");
+            } else {
+                logMessage("These steep mountain peaks are impassable. Look for a mountain pass.", "text-gray-500 text-xs");
+            }
+            return;
+        }
         
         player.x = nx; player.y = ny; player.worldX = nx; player.worldY = ny;
         let tile = gameState.worldMap[ny][nx];
@@ -112,13 +122,24 @@ window.movePlayer = function(dx, dy) {
         if (passiveRank('momentum')) player.momentumStacks = Math.min(5, (player.momentumStacks || 0) + 1);
         
         if (tile === 'Ω') {
-            logMessage("*** You touch the Ancient Shrine! ***", "text-yellow-400 font-bold blink");
-            let xpBonus = (player.level || 1) * 20;
-            logMessage(`You receive a blessing! HP and MP fully restored! +${xpBonus} XP!`, "success");
+            logMessage("*** You touch the Ancient Shrine of the Ascendant! ***", "text-yellow-400 font-bold blink");
+            let xpBonus = (player.level || 1) * 35 + 100;
+            logMessage(`You receive a celestial blessing! HP and MP fully restored! +${xpBonus} XP!`, "success");
             player.hp = player.maxHp;
             player.mp = player.maxMp;
             gainXP(xpBonus);
-            gameState.worldMap[ny][nx] = 'P'; 
+
+            if (player.quests) {
+                player.quests.forEach(q => {
+                    if (!q.isComplete && !q.isTurnedIn && (q.target === 'Ancient Shrine' || q.target === 'Ω' || q.title.includes('Awakening') || q.title.includes('Sanctuary'))) {
+                        q.progress = q.maxProgress;
+                        q.isComplete = true;
+                        logMessage(`*** Quest Objective Complete: ${q.title} ***`, "text-yellow-400 font-bold blink");
+                        logMessage(`Return to your patron in ${q.patronCity || 'Kingsfall'} to complete the Ascendant Awakening!`, "text-green-400 font-bold");
+                    }
+                });
+            }
+
             moveWorldEntities();
             renderMap(); 
             triggerAutoSave(); 
@@ -314,18 +335,18 @@ window.executeAction = function(action) {
                 let isCave = !['world'].includes(player.zone) && ['D', '*'].includes(gameState.localMaps[player.zone]?.type);
 
                 // Determine Profession & Base Material
-                if (tile === 't' || tile === 'l') { 
-                    prof = 'Woodworking'; matId = 'wood_oak'; replacement = 'd'; 
-                } else if (tile === 'd') {
-                    prof = 'Woodworking'; matId = 'wood_oak'; replacement = (player.zone === 'world' ? 'P' : '.');
-                } else if (tile === 'r' || tile === '#' || tile === 'W') { 
-                    prof = 'Metalworking'; matId = 'ore_copper'; replacement = (player.zone === 'world' ? 'P' : 'R'); 
-                } else if (tile === 's' || tile === 'c') { 
-                    prof = 'Alchemy'; matId = 'herb_mudleaf'; replacement = (player.zone === 'world' ? 'D' : '.'); 
-                } else if (tile === 'g') {
-                    prof = 'Alchemy'; matId = 'herb_mudleaf'; replacement = (player.zone === 'world' ? 'P' : '.');
-                } else if (tile === 'i') {
-                    prof = 'Alchemy'; matId = 'herb_frostbloom'; replacement = (player.zone === 'world' ? 'T' : '.');
+                if (tile === 't' || tile === 'l' || tile === '♣') { 
+                    prof = 'Woodworking'; matId = 'wood_oak'; replacement = 'T'; 
+                } else if (tile === 'd' || tile === 'T') {
+                    prof = 'Woodworking'; matId = 'wood_oak'; replacement = (player.zone === 'world' ? '"' : '.');
+                } else if (tile === 'r' || tile === 'o' || tile === '#' || tile === '▲' || tile === '^' || tile === 'W') { 
+                    prof = 'Metalworking'; matId = 'ore_copper'; replacement = (player.zone === 'world' ? '"' : 'R'); 
+                } else if (tile === 's' || tile === 'c' || tile === '╤') { 
+                    prof = 'Alchemy'; matId = 'herb_mudleaf'; replacement = (player.zone === 'world' ? '.' : '.'); 
+                } else if (tile === 'g' || tile === '"' || tile === 'p') { 
+                    prof = 'Alchemy'; matId = 'herb_mudleaf'; replacement = (player.zone === 'world' ? '"' : '.'); 
+                } else if (tile === 'i' || tile === '∆' || tile === '*') {
+                    prof = 'Alchemy'; matId = 'herb_frostbloom'; replacement = (player.zone === 'world' ? '*' : '.');
                 }
                 
                 if (matId && prof) {
