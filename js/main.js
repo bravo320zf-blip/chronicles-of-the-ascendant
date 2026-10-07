@@ -8,7 +8,7 @@ import { renderMap, updateStatus } from "./ui/renderer.js";
 import { toggleTorch, updateTimeUI, startTimeLoop, getGlobalWorldTimeMinutes, formatTime, isWorldNight } from "./core/time.js";
 import { logMessage, playEncounterAnimation } from "./ui/log.js";
 import { moveEntities, moveWorldEntities, talkToNPC, handleDialogue, showDialogueOptions, showWares, spawnGuard, applyGuardDeathPenalty } from "./core/entities.js";
-import { registerAction, hasLineOfSight, updateProjectiles, resolveSkillHit, triggerCombat, triggerLocalCombat, gainXP, handleCombatTurn, useActiveSkill, confirmCast, executeTargeting, triggerBossDefeat } from "./core/combat.js";
+import { registerAction, hasLineOfSight, updateProjectiles, resolveSkillHit, triggerCombat, triggerLocalCombat, gainXP, handleCombatTurn, attemptFlee, useActiveSkill, confirmCast, executeTargeting, triggerBossDefeat } from "./core/combat.js";
 import { calculateStats, renderInventory, closeInventory, sortInventory, useItem, equipItem, unequipItem, sellItem, renderEquipment, renderCrafting, selectRecipe, craftItem, depositItem, withdrawItem, handleGoldStash, gainProfessionXP } from "./core/inventory.js";
 import { toggleModal, renderStats, renderJournal, renderStash, renderSkills, unlockSkill, upgradeSkill, assignHotkey, renderPassives, upgradePassive } from "./ui/modals.js";
 import { showAuthModal, showCharSelectModal, showCharCreationModal, showMainGame, initAuthUIEvents, updateAccountBadge } from "./ui/authUI.js";
@@ -63,6 +63,7 @@ window.startTrade = startTrade;
 window.cancelTrade = cancelTrade;
 window.showEmoteList = showEmoteList;
 window.performEmote = performEmote;
+window.attemptFlee = attemptFlee;
 window.switchCharacter = async function() {
     await flushSave();
     const chars = await loadUserCharacters(gameState.currentUser?.uid);
@@ -74,8 +75,14 @@ window.switchCharacter = async function() {
 // ==========================================
 window.movePlayer = function(dx, dy) {
     let player = gameState.player;
-    if (player.hp <= 0 || player.inCombat || gameState.isAnimating) return;
+    if (player.hp <= 0 || gameState.isAnimating) return;
     if (player.activeDialogue) { player.activeDialogue = null; logMessage("Conversation ended.", "system"); }
+
+    // If player is in combat on the overworld, moving attempts to flee!
+    if (player.zone === 'world' && player.inCombat) {
+        attemptFlee();
+        return;
+    }
 
     // Check for bumping into another online player
     const targetX = player.zone === 'world' ? (player.worldX + dx) : (player.localX + dx);
@@ -165,7 +172,7 @@ window.movePlayer = function(dx, dy) {
             triggerCombat(tile);
         }
         
-        if (player.zone === 'world') {
+        if (player.zone === 'world' && !player.inCombat) {
             moveWorldEntities();
         }
     } else {
@@ -275,12 +282,27 @@ window.movePlayer = function(dx, dy) {
             
             let entity = lMap.entities[`${nx},${ny}`];
             if (entity) {
-                if (entity.type === 'enemy') triggerLocalCombat(entity.data, nx, ny);
+                if (entity.type === 'enemy') {
+                    if (!player.inCombat || player.combatTarget?.x !== nx || player.combatTarget?.y !== ny) {
+                        triggerLocalCombat(entity.data, nx, ny);
+                    }
+                    handleCombatTurn(false);
+                    renderMap();
+                    if (window.updateStatus) window.updateStatus();
+                    return;
+                }
                 else if (entity.type === 'npc') talkToNPC(entity.data);
                 return; 
             }
         }
         player.localX = nx; player.localY = ny;
+
+        if (player.inCombat && player.combatTarget) {
+            let distToTarget = Math.abs(player.localX - player.combatTarget.x) + Math.abs(player.localY - player.combatTarget.y);
+            if (distToTarget > 1) {
+                player.inCombat = false;
+            }
+        }
         
         let skipAction = passiveRank('phase_shift') && Math.random() < (player.passives.phase_shift * 0.1);
         if (!skipAction) {
@@ -425,9 +447,32 @@ window.executeAction = function(action) {
         renderMap(); 
         return;
     }
-    if (action === 'attack' && player.inCombat) {
-        handleCombatTurn(false);
-        return;
+    if (action === 'attack') {
+        if (player.inCombat && player.currentEnemy) {
+            handleCombatTurn(false);
+            return;
+        } else if (player.zone !== 'world') {
+            let lMap = gameState.localMaps[player.zone];
+            if (lMap && lMap.entities) {
+                let dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+                for (let d of dirs) {
+                    let key = `${player.localX + d[0]},${player.localY + d[1]}`;
+                    if (lMap.entities[key] && lMap.entities[key].type === 'enemy') {
+                        let entity = lMap.entities[key];
+                        triggerLocalCombat(entity.data, player.localX + d[0], player.localY + d[1]);
+                        handleCombatTurn(false);
+                        renderMap();
+                        if (window.updateStatus) window.updateStatus();
+                        return;
+                    }
+                }
+            }
+            logMessage("No enemy in melee range to attack. Move closer or use a spell [Q]/[E]!", "text-gray-400");
+            return;
+        } else {
+            logMessage("There are no enemies here to attack.", "text-gray-400");
+            return;
+        }
     }
     if (action === 'look') {
         let biomeName = player.zone === 'world' ? 'Wilderness' : gameState.localMaps[player.zone]?.name;
@@ -481,6 +526,8 @@ function initCommandInput() {
             else if (['s', 'south'].includes(cmd.toLowerCase())) movePlayer(0, 1);
             else if (['w', 'west'].includes(cmd.toLowerCase())) movePlayer(-1, 0);
             else if (['e', 'east'].includes(cmd.toLowerCase())) movePlayer(1, 0);
+            else if (['/flee', 'flee', '/run', 'run', '/escape', 'escape'].includes(cmd.toLowerCase())) attemptFlee();
+            else if (cmd === '/attack' || cmd === 'attack' || cmd === 'a') executeAction('attack');
             else if (cmd === '/time' || cmd === 'time' || cmd === '/clock' || cmd === 'clock') {
                 let m = getGlobalWorldTimeMinutes();
                 let night = isWorldNight(m);
@@ -489,9 +536,10 @@ function initCommandInput() {
             else if (cmd === '/help' || cmd === 'help') {
                 logMessage("=== MUD COMMAND GUIDE ===", "system");
                 logMessage("Movement: [Arrow Keys] or 'n', 's', 'e', 'w'");
+                logMessage("Combat: [A] Attack, [Q]/[E] Cast Spells, /flee (run away)");
                 logMessage("Chat: '/say <msg>' (local) | '/shout <msg>' (global) | '/who' (online players)");
-                logMessage("Shortcuts: [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather, [Q]/[E] Cast Spells");
-                logMessage("Commands: /look, /gather, /rest, /torch, /time, /respawn");
+                logMessage("Shortcuts: [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
+                logMessage("Commands: /look, /gather, /rest, /torch, /time, /attack, /flee, /respawn");
             }
             else if (cmd === '/respawn') {
                 let player = gameState.player;

@@ -116,7 +116,8 @@ function initPresenceListener() {
             renderMap();
             updateOnlinePlayersCount();
         }, (err) => {
-            console.warn("Presence listener error:", err);
+            console.warn("Presence listener notice:", err?.message || err);
+            startSimulatedWanderers();
         });
     } catch (e) {
         console.warn("Could not start presence listener:", e);
@@ -149,6 +150,8 @@ function initChatListener() {
                     }
                 }
             });
+        }, (err) => {
+            console.warn("Chat listener notice:", err?.message || err);
         });
     } catch (e) {
         console.warn("Could not start chat listener:", e);

@@ -48,6 +48,9 @@ export function showMainGame() {
     let player = gameState.player;
     if (player) {
         player.symbol = player.symbol || '@';
+        player.inCombat = false;
+        player.currentEnemy = null;
+        player.combatTarget = null;
         // If player has a specific zone saved (e.g. city), re-enter or validate it
         if (player.zone && player.zone !== 'world') {
             let poiKey = player.zone.split('_')[0];

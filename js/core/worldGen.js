@@ -350,6 +350,9 @@ export function placePOI(type, name, rx, ry, biome, id, w, h) {
 
 export function enterLocalZone(poiKey, poi) {
     let player = gameState.player;
+    player.inCombat = false;
+    player.currentEnemy = null;
+    player.combatTarget = null;
     player.zone = `${poiKey}_0`;
     if (!gameState.localMaps[player.zone]) {
         if(poi.type === 'C') generateCity(poiKey, poi);
@@ -698,6 +701,9 @@ export function generateArena(type, context) {
     }
     
     gameState.player.zone = 'arena_0';
+    gameState.player.inCombat = false;
+    gameState.player.currentEnemy = null;
+    gameState.player.combatTarget = null;
     
     let spawned = false;
     for(let y=0; y<LOCAL_SIZE; y++){

@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Chronicles of the Ascendant - Cloud Security Rules
+    // Matching all game artifacts across users, multiplayer, clock, chat, and trades
+    match /artifacts/{appId} {
+      
+      // Multi-slot player characters & user saves
+      match /users/{userId}/{allPaths=**} {
+        // Authenticated users can read and manage their own characters
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /users/{userId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Multiplayer online presence
+      match /presence/{userId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Live synchronized server clock
+      match /world/clock {
+        allow read, write: if true;
+      }
+
+      // Multiplayer in-game chat (say / shout)
+      match /chat/{messageId} {
+        allow read, create: if request.auth != null;
+      }
+
+      // Player trading sessions
+      match /trades/{tradeId} {
+        allow read, write: if request.auth != null;
+      }
+
+      // Default fallback for any additional game collections
+      match /{document=**} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+}

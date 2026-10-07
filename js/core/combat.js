@@ -291,7 +291,40 @@ export function triggerCombat(tile) {
     
     let cName = isElite ? `<span class="text-purple-400 blink">${eName}</span>` : `<span class="text-red-500">${eName}</span>`;
     logMessage(`A wild ${cName} (Lvl ${eLevel}) attacks!`, "combat");
+    logMessage(`Type /flee or move to run away, or press [A] to attack!`, "text-yellow-400 text-xs");
     if (window.updateStatus) window.updateStatus();
+}
+
+export function attemptFlee() {
+    let player = gameState.player;
+    if (!player.inCombat) {
+        logMessage("You are not currently in combat.", "system");
+        return false;
+    }
+    
+    let enemy = player.currentEnemy;
+    let eName = enemy ? enemy.name : "enemy";
+    registerAction();
+    
+    let dex = player.calcStats?.dex || 10;
+    let fleeChance = 0.60 + (dex * 0.01);
+    if (enemy && enemy.isBoss) fleeChance = 0.35;
+    if (passiveRank('smoke_screen')) fleeChance += 0.25;
+    
+    if (Math.random() < fleeChance) {
+        logMessage(`*** You successfully fled from the ${eName}! ***`, "success");
+        player.inCombat = false;
+        player.currentEnemy = null;
+        player.combatTarget = null;
+        if (window.updateStatus) window.updateStatus();
+        if (window.renderMap) window.renderMap();
+        return true;
+    } else {
+        logMessage(`*** You failed to flee from the ${eName}! It strikes as you turn to run! ***`, "combat");
+        handleCombatTurn(true);
+        if (window.updateStatus) window.updateStatus();
+        return false;
+    }
 }
 
 export function triggerLocalCombat(eData, lx, ly) {
@@ -785,9 +818,16 @@ export function executeTargeting() {
 
 export function triggerBossDefeat(e) {
     let player = gameState.player;
+    player.inCombat = false;
+    player.currentEnemy = null;
+    player.combatTarget = null;
+    
     if (!e.poiRef || !gameState.pois[e.poiRef]) {
         logMessage("The area is secured. You return to the wilderness.", "success");
         player.zone = 'world'; 
+        player.x = player.worldX || 30;
+        player.y = player.worldY || 30;
+        if (window.renderMap) window.renderMap();
         return;
     }
     
@@ -807,5 +847,8 @@ export function triggerBossDefeat(e) {
         delete gameState.localMaps[`${poi.rootX},${poi.rootY}_0`]; 
         generateNPCsForCity(poi.rootX, poi.rootY);
     }
-    player.zone = 'world'; player.x = poi.rootX; player.y = poi.rootY;
+    player.zone = 'world'; 
+    player.x = poi.rootX; 
+    player.y = poi.rootY;
+    if (window.renderMap) window.renderMap();
 }
