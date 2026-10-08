@@ -6,6 +6,7 @@ import { AVATAR_GLYPHS } from "../data/constants.js";
 import { logMessage } from "./log.js";
 import { renderInventory, closeInventory, renderCrafting, calculateStats, depositItem, withdrawItem } from "../core/inventory.js";
 import { broadcastPresence } from "../network/multiplayer.js";
+import { renderWorldMapModal } from "./worldMap.js";
 
 export function toggleModal(id) {
     const modal = document.getElementById(id);
@@ -19,6 +20,7 @@ export function toggleModal(id) {
         if(id === 'stash-modal') renderStash();
         if(id === 'journal-modal') renderJournal();
         if(id === 'crafting-modal') renderCrafting();
+        if(id === 'worldmap-modal') renderWorldMapModal();
     } else {
         if (id === 'inventory-modal') closeInventory();
         else modal.classList.add('hidden-ui');

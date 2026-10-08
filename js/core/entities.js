@@ -8,23 +8,52 @@ import { generateArena, findEmptySpot } from "./worldGen.js";
 
 export function moveWorldEntities() {
     let player = gameState.player;
-    if (!player.worldBosses) player.worldBosses = [];
+    if (player.hp <= 0 || player.zone !== 'world' || player.inCombat) return;
+
+    if (!gameState.worldBosses) gameState.worldBosses = [];
+    gameState.player.worldBosses = gameState.worldBosses;
+
     let triggeredBossIndex = -1;
 
-    player.worldBosses.forEach((boss, i) => {
+    gameState.worldBosses.forEach((boss, i) => {
+        // If boss is defeated, check respawn timer
+        if (boss.isDefeated) {
+            if (boss.respawnAt && Date.now() >= boss.respawnAt) {
+                boss.isDefeated = false;
+                boss.hp = boss.maxHp;
+                boss.x = boss.anchorX;
+                boss.y = boss.anchorY;
+                logMessage(`*** A terrifying roar echoes across the realm! ${boss.name} has awakened! ***`, "text-red-500 font-bold blink");
+                if (window.broadcastPresence) window.broadcastPresence();
+            }
+            return;
+        }
+
         let dist = Math.abs(player.worldX - boss.x) + Math.abs(player.worldY - boss.y);
         
-        if (dist <= 15 && dist > 0) { 
+        // AGGRO: Only engage if player approaches dangerously close (4 tiles or less)
+        if (dist <= 4 && dist > 0) { 
             let dx = Math.sign(player.worldX - boss.x);
             let dy = Math.sign(player.worldY - boss.y);
-            if (gameState.worldMap[boss.y + dy]?.[boss.x + dx] !== '#') {
+            let targetTile = gameState.worldMap[boss.y + dy]?.[boss.x + dx];
+            if (targetTile && targetTile !== '~' && targetTile !== '#' && targetTile !== '▲') {
                 boss.x += dx; boss.y += dy;
             }
-        } else if (Math.random() < 0.3) { 
-            let dirs = [[0,1], [0,-1], [1,0], [-1,0]];
-            let d = dirs[Math.floor(Math.random()*dirs.length)];
-            if (gameState.worldMap[boss.y + d[1]]?.[boss.x + d[0]] !== '#') {
-                boss.x += d[0]; boss.y += d[1];
+            if (dist === 4) {
+                logMessage(`[Danger]: You sense the crushing presence of <span class="text-red-500 font-bold">${boss.name}</span> nearby!`, "combat");
+            }
+        } else {
+            // PATROL: Slowly roam around territorial domain anchor (max 8 tiles from anchor)
+            if (Math.random() < 0.25) { 
+                let dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+                let d = dirs[Math.floor(Math.random()*dirs.length)];
+                let nx = boss.x + d[0];
+                let ny = boss.y + d[1];
+                let distToAnchor = Math.abs(nx - boss.anchorX) + Math.abs(ny - boss.anchorY);
+                let targetTile = gameState.worldMap[ny]?.[nx];
+                if (distToAnchor <= 8 && targetTile && targetTile !== '~' && targetTile !== '#' && targetTile !== '▲') {
+                    boss.x = nx; boss.y = ny;
+                }
             }
         }
         
@@ -34,12 +63,11 @@ export function moveWorldEntities() {
     });
 
     if (triggeredBossIndex !== -1) {
-        let boss = player.worldBosses[triggeredBossIndex];
+        let boss = gameState.worldBosses[triggeredBossIndex];
         playEncounterAnimation('world_boss', "WORLD BOSS!", () => {
             logMessage(`*** YOU ARE AMBUSHED BY A WORLD BOSS: ${boss.name}! ***`, "text-red-500 font-bold blink");
             generateArena('world_boss', boss);
         });
-        player.worldBosses.splice(triggeredBossIndex, 1);
     }
 }
 

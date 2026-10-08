@@ -822,6 +822,17 @@ export function triggerBossDefeat(e) {
     player.currentEnemy = null;
     player.combatTarget = null;
     
+    if (e.isBoss) {
+        let wb = (gameState.worldBosses || []).find(b => b.name === e.name);
+        if (wb) {
+            wb.isDefeated = true;
+            wb.respawnAt = Date.now() + 1800000; // 30 minutes
+            try {
+                localStorage.setItem('cota_world_bosses', JSON.stringify(gameState.worldBosses));
+            } catch (err) {}
+        }
+    }
+    
     if (!e.poiRef || !gameState.pois[e.poiRef]) {
         logMessage("The area is secured. You return to the wilderness.", "success");
         player.zone = 'world'; 

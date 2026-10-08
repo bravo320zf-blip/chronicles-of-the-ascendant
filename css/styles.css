@@ -199,3 +199,20 @@ body {
     border-color: #33ff33;
     box-shadow: 0 0 10px rgba(51, 255, 51, 0.25);
 }
+
+/* Cartographic World Map Atlas */
+#worldmap-canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+#wm-canvas-wrapper::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+#wm-canvas-wrapper::-webkit-scrollbar-thumb {
+    background: #064e3b;
+    border-radius: 3px;
+}
+#wm-canvas-wrapper::-webkit-scrollbar-track {
+    background: #022c22;
+}

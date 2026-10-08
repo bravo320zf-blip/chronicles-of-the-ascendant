@@ -13,6 +13,7 @@ import { calculateStats, renderInventory, closeInventory, sortInventory, useItem
 import { toggleModal, renderStats, renderJournal, renderStash, renderSkills, unlockSkill, upgradeSkill, assignHotkey, renderPassives, upgradePassive } from "./ui/modals.js";
 import { showAuthModal, showCharSelectModal, showCharCreationModal, showMainGame, initAuthUIEvents, updateAccountBadge } from "./ui/authUI.js";
 import { openPlayerInteraction, closePlayerInteraction, inviteToParty, startTrade, cancelTrade, showEmoteList, performEmote, initTradeEventListeners } from "./ui/trade.js";
+import { initExploration, revealWorldArea, renderWorldMapModal, initWorldMapEvents } from "./ui/worldMap.js";
 import { CITIES } from "./data/worldData.js";
 import { MATERIALS, generateRandomItem } from "./data/items.js";
 import { LOCAL_TILES } from "./data/terrain.js";
@@ -64,6 +65,7 @@ window.cancelTrade = cancelTrade;
 window.showEmoteList = showEmoteList;
 window.performEmote = performEmote;
 window.attemptFlee = attemptFlee;
+window.renderWorldMapModal = renderWorldMapModal;
 window.switchCharacter = async function() {
     await flushSave();
     const chars = await loadUserCharacters(gameState.currentUser?.uid);
@@ -121,6 +123,7 @@ window.movePlayer = function(dx, dy) {
         }
         
         player.x = nx; player.y = ny; player.worldX = nx; player.worldY = ny;
+        revealWorldArea(nx, ny, 12);
         let tile = gameState.worldMap[ny][nx];
         
         let skipAction = passiveRank('phase_shift') && Math.random() < (player.passives.phase_shift * 0.1);
@@ -527,6 +530,7 @@ function initCommandInput() {
             else if (['w', 'west'].includes(cmd.toLowerCase())) movePlayer(-1, 0);
             else if (['e', 'east'].includes(cmd.toLowerCase())) movePlayer(1, 0);
             else if (['/flee', 'flee', '/run', 'run', '/escape', 'escape'].includes(cmd.toLowerCase())) attemptFlee();
+            else if (['/map', 'map', '/worldmap', 'worldmap'].includes(cmd.toLowerCase())) toggleModal('worldmap-modal');
             else if (cmd === '/attack' || cmd === 'attack' || cmd === 'a') executeAction('attack');
             else if (cmd === '/time' || cmd === 'time' || cmd === '/clock' || cmd === 'clock') {
                 let m = getGlobalWorldTimeMinutes();
@@ -538,8 +542,8 @@ function initCommandInput() {
                 logMessage("Movement: [Arrow Keys] or 'n', 's', 'e', 'w'");
                 logMessage("Combat: [A] Attack, [Q]/[E] Cast Spells, /flee (run away)");
                 logMessage("Chat: '/say <msg>' (local) | '/shout <msg>' (global) | '/who' (online players)");
-                logMessage("Shortcuts: [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
-                logMessage("Commands: /look, /gather, /rest, /torch, /time, /attack, /flee, /respawn");
+                logMessage("Shortcuts: [M] World Map, [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
+                logMessage("Commands: /map, /look, /gather, /rest, /torch, /time, /attack, /flee, /respawn");
             }
             else if (cmd === '/respawn') {
                 let player = gameState.player;
@@ -654,8 +658,9 @@ function initKeyboardControls() {
             case 'f': toggleTorch(); break;
             case 'q': if(player.hotkeys && player.hotkeys.q) useActiveSkill(player.hotkeys.q); break;
             case 'e': if(player.hotkeys && player.hotkeys.e) useActiveSkill(player.hotkeys.e); break;
+            case 'm': toggleModal('worldmap-modal'); break;
             case 'escape':
-                ['stats-modal', 'inventory-modal', 'skills-modal', 'crafting-modal', 'passive-modal', 'journal-modal', 'stash-modal', 'settings-modal', 'player-interact-modal', 'trade-modal'].forEach(m => {
+                ['stats-modal', 'inventory-modal', 'skills-modal', 'crafting-modal', 'passive-modal', 'journal-modal', 'stash-modal', 'settings-modal', 'player-interact-modal', 'trade-modal', 'worldmap-modal'].forEach(m => {
                     document.getElementById(m)?.classList.add('hidden-ui');
                 });
                 break;
@@ -776,6 +781,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initAuthUIEvents();
     initCharacterCreation();
     initTradeEventListeners();
+    initWorldMapEvents();
     startTimeLoop();
     initMultiplayer();
 

@@ -196,7 +196,7 @@
                 
                 <!-- QUICK TOUCH / MOUSE CONTROLS -->
                 <div class="grid grid-cols-3 gap-1 mb-2">
-                    <button class="btn-term p-1 text-[10px]" onclick="executeAction('legend')">MAP KEY</button>
+                    <button class="btn-term p-1 text-[10px] text-emerald-400 border-emerald-900 hover:bg-emerald-900/30 font-bold" onclick="toggleModal('worldmap-modal')">MAP [M]</button>
                     <button class="btn-term p-1" onclick="movePlayer(0, -1)">▲ N</button>
                     <button class="btn-term p-1 text-[10px]" onclick="toggleTorch()" id="btn-torch">TORCH [F]</button>
                     
@@ -233,6 +233,7 @@
             <button class="btn-term text-sm border-cyan-700 text-cyan-400 hover:bg-cyan-900/30" onclick="toggleModal('crafting-modal')">Crafting [R]</button>
             <button class="btn-term text-sm" onclick="toggleModal('passive-modal')">Passive Tree [P]</button>
             <button class="btn-term text-sm" onclick="toggleModal('journal-modal')">Journal [J]</button>
+            <button class="btn-term text-sm border-emerald-700 text-emerald-400 hover:bg-emerald-900/30 font-bold" onclick="toggleModal('worldmap-modal')">World Map [M]</button>
             <button class="btn-term text-sm text-yellow-400 border-yellow-900 hover:bg-yellow-900/30" onclick="executeAction('rest')">Rest</button>
         </div>
     </div>
@@ -544,8 +545,50 @@
             </div>
         </div>
     </div>
-</div>
 
-<script type="module" src="js/main.js?v=2.4"></script>
+    <!-- ============================================== -->
+    <!-- CARTOGRAPHIC ATLAS & EXPLORED WORLD MAP MODAL  -->
+    <!-- ============================================== -->
+    <div id="worldmap-modal" class="hidden-ui absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-2 md:p-4">
+        <div class="panel w-full max-w-4xl h-[92vh] flex flex-col p-4 relative bg-black/95 border-2 border-emerald-900 shadow-2xl">
+            <!-- HEADER -->
+            <div class="flex justify-between items-center border-b border-emerald-900/60 pb-2 mb-2">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-xl md:text-2xl font-bold text-emerald-400 tracking-wider">CARTOGRAPHIC ATLAS OF AETHELGARD</h2>
+                    <span id="wm-explored-badge" class="bg-emerald-950/70 border border-emerald-700 text-emerald-300 text-xs px-2 py-0.5 rounded font-mono">0.0% Explored</span>
+                </div>
+                <button class="text-red-500 hover:text-red-400 font-bold text-lg px-2" onclick="toggleModal('worldmap-modal')">[X]</button>
+            </div>
+
+            <!-- CONTROLS & INFO BAR -->
+            <div class="flex flex-wrap justify-between items-center bg-zinc-950/80 border border-emerald-950 p-2 mb-2 text-xs gap-2">
+                <div id="wm-hover-info" class="text-gray-300 font-mono">Hover over discovered regions to inspect coordinates & terrain.</div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-400">Hero Location:</span>
+                    <span id="wm-hero-coords" class="text-green-400 font-bold font-mono">(135, 85) Crownlands</span>
+                    <button id="btn-wm-recenter" class="btn-term text-[11px] py-0.5 px-2 text-cyan-400 border-cyan-800 hover:bg-cyan-900/30">CENTER HERO</button>
+                </div>
+            </div>
+
+            <!-- MAP CANVAS CONTAINER (SCROLLABLE / PAN-ABLE) -->
+            <div id="wm-canvas-wrapper" class="flex-1 overflow-auto bg-black border border-emerald-950/80 relative flex items-center justify-center p-2 rounded cursor-crosshair">
+                <canvas id="worldmap-canvas" width="600" height="600" class="border border-emerald-900/40 shadow-inner bg-zinc-950"></canvas>
+            </div>
+
+            <!-- FOOTER LEGEND -->
+            <div class="border-t border-emerald-900/60 pt-2 mt-2 flex flex-wrap justify-between items-center text-[11px] text-gray-400 gap-2">
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block border border-green-500"></span> Hero</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block border border-amber-800"></span> City</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> Ancient Shrine</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-pink-500 inline-block"></span> World Boss</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-zinc-900 inline-block border border-zinc-700"></span> Unexplored Fog</span>
+                </div>
+                <div class="text-gray-500 font-mono">Press [M] or [ESC] to return to the realm</div>
+            </div>
+        </div>
+    </div>
+
+<script type="module" src="js/main.js?v=2.5"></script>
 </body>
 </html>

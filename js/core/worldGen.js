@@ -850,34 +850,64 @@ export function generateMultiLevel(poiKey, poi) {
     }
 }
 
-export function spawnWorldBoss() {
-    if (!gameState.player.worldBosses) gameState.player.worldBosses = [];
-    gameState.player.worldBosses = [];
+export function saveWorldBossState() {
+    try {
+        localStorage.setItem('cota_world_bosses', JSON.stringify(gameState.worldBosses));
+    } catch (e) {}
+}
 
-    const biomes = ['F', 'D', 'T', 'S', 'P', '#'];
-    biomes.forEach(b => {
-        let attempts = 0;
-        while (attempts < 200) {
-            let rx = Math.floor(Math.random() * (WORLD_SIZE - 24)) + 12;
-            let ry = Math.floor(Math.random() * (WORLD_SIZE - 24)) + 12;
-            let tile = gameState.worldMap[ry]?.[rx];
-            if (tile && tile !== '~' && tile !== '=' && tile !== '▲' && tile !== '#' && getTileBiome(tile) === b && !gameState.pois[`${rx},${ry}`]) {
-                let bInfo = BIOME_BOSSES[b] || BIOME_BOSSES['P'];
-                gameState.player.worldBosses.push({
-                    x: rx, y: ry,
-                    biome: b,
-                    name: bInfo.name,
-                    symbol: 'Ω',
-                    color: '#ff00ff',
-                    hp: 500,
-                    damage: 25,
-                    level: 10
-                });
-                break;
+export function loadWorldBossState() {
+    try {
+        let saved = localStorage.getItem('cota_world_bosses');
+        if (saved) {
+            let parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                gameState.worldBosses = parsed;
+                if (gameState.player) gameState.player.worldBosses = gameState.worldBosses;
+                return true;
             }
-            attempts++;
         }
+    } catch (e) {}
+    return false;
+}
+
+export function spawnWorldBoss(forceRespawn = false) {
+    if (!forceRespawn && loadWorldBossState()) {
+        return;
+    }
+
+    const BOSS_DOMAINS = [
+        { biome: 'P', anchorX: 163, anchorY: 85, name: 'Void Warlord of the Crownlands', region: 'Crownlands', hp: 650, dmg: 28 },
+        { biome: 'F', anchorX: 35, anchorY: 116, name: 'Blighted Treant Patriarch', region: 'Sylva', hp: 600, dmg: 26 },
+        { biome: 'T', anchorX: 82, anchorY: 33, name: 'Ancient Frost Wyrm, Rimefang', region: 'Borealis', hp: 750, dmg: 32 },
+        { biome: 'S', anchorX: 34, anchorY: 170, name: 'Swamp Hag Matriarch, Morwena', region: 'Venomfang', hp: 580, dmg: 25 },
+        { biome: 'D', anchorX: 178, anchorY: 162, name: 'Obsidian Sand Colossus', region: 'Solaris', hp: 700, dmg: 30 },
+        { biome: '#', anchorX: 85, anchorY: 171, name: 'Magma Behemoth, Ignis', region: 'Ashen Reach', hp: 720, dmg: 31 }
+    ];
+
+    gameState.worldBosses = BOSS_DOMAINS.map(b => {
+        let bInfo = BIOME_BOSSES[b.biome] || BIOME_BOSSES['P'];
+        return {
+            x: b.anchorX,
+            y: b.anchorY,
+            anchorX: b.anchorX,
+            anchorY: b.anchorY,
+            biome: b.biome,
+            region: b.region,
+            name: bInfo.name,
+            symbol: 'Ω',
+            color: '#ff00ff',
+            hp: b.hp,
+            maxHp: b.hp,
+            damage: b.dmg,
+            level: 12,
+            isDefeated: false,
+            respawnAt: null
+        };
     });
+
+    if (gameState.player) gameState.player.worldBosses = gameState.worldBosses;
+    saveWorldBossState();
 }
 
 export function findEmptySpot(map, char) {
