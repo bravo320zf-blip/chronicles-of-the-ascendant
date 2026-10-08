@@ -20,6 +20,7 @@ import { LOCAL_TILES } from "./data/terrain.js";
 import { WORLD_SIZE, LOCAL_SIZE } from "./data/constants.js";
 import { passiveRank } from "./core/state.js";
 import { getClass } from "./data/classes.js";
+import { getRemainingGathers, getMaxDailyGathers, useGatherEnergy, updateGatherUI } from "./core/gathering.js";
 
 // ==========================================
 // EXPOSE CORE FUNCTIONS TO GLOBAL WINDOW API
@@ -69,6 +70,9 @@ window.attemptFlee = attemptFlee;
 window.renderWorldMapModal = renderWorldMapModal;
 window.openWorldMap = openWorldMap;
 window.toggleWorldMap = toggleWorldMap;
+window.updateGatherUI = updateGatherUI;
+window.getRemainingGathers = getRemainingGathers;
+window.getMaxDailyGathers = getMaxDailyGathers;
 window.switchCharacter = async function() {
     await flushSave();
     const chars = await loadUserCharacters(gameState.currentUser?.uid);
@@ -329,6 +333,14 @@ window.executeAction = function(action) {
     if ((player.hp <= 0 && action !== 'respawn') || gameState.isAnimating) return;
     
     if (action === 'gather') {
+        const remaining = getRemainingGathers(player);
+        if (remaining <= 0) {
+            const maxG = getMaxDailyGathers(player);
+            logMessage(`⚠️ <span class="text-yellow-400 font-bold">Daily gathering limit reached!</span> (${maxG}/${maxG} gathered today). Rest until dawn (06:00 AM) or level up crafting professions to expand your capacity!`, "warning");
+            updateGatherUI();
+            return;
+        }
+
         registerAction();
         let gathered = false;
         let px = player.zone === 'world' ? (player.worldX ?? player.x) : player.localX;
@@ -400,9 +412,13 @@ window.executeAction = function(action) {
                     if (!player.inventory) player.inventory = [];
                     player.inventory.push({...item, count: 1});
                     
+                    useGatherEnergy(player);
+                    const left = getRemainingGathers(player);
+                    const maxG = getMaxDailyGathers(player);
+
                     let rColor = item.rarity === 'Rare' ? 'text-purple-400' : (item.rarity === 'Uncommon' ? 'text-blue-400' : 'text-yellow-400');
                     let xpGain = item.rarity === 'Rare' ? 25 : (item.rarity === 'Uncommon' ? 15 : 5);
-                    logMessage(`You gathered <span class="${rColor} font-bold">${item.name}</span>! (+${xpGain} ${prof} XP)`, "system");
+                    logMessage(`You gathered <span class="${rColor} font-bold">${item.name}</span>! (+${xpGain} ${prof} XP) <span class="text-xs text-gray-400 font-mono">[Energy: ${left}/${maxG}]</span>`, "system");
                     mapData[ty][tx] = replacement;
                     gathered = true;
                     
@@ -430,6 +446,7 @@ window.executeAction = function(action) {
         } else { 
             sortInventory(); 
             renderMap(); 
+            updateGatherUI();
             triggerAutoSave(); 
         }
         return;
@@ -540,13 +557,19 @@ function initCommandInput() {
                 let night = isWorldNight(m);
                 logMessage(`The server world clock reads: <span class="${night ? 'text-blue-300' : 'text-yellow-400'} font-bold">${formatTime(m)} (${night ? 'Night' : 'Day'})</span>.`, "system");
             }
+            else if (cmd === '/energy' || cmd === '/gathers' || cmd === '/quota') {
+                let player = gameState.player;
+                let rem = getRemainingGathers(player);
+                let maxG = getMaxDailyGathers(player);
+                logMessage(`🌿 Gathering Energy: <span class="text-yellow-400 font-bold">${rem} / ${maxG}</span> remaining today. (Replenishes at 06:00 AM dawn. Level up crafting professions for +2 per level).`, "system");
+            }
             else if (cmd === '/help' || cmd === 'help') {
                 logMessage("=== MUD COMMAND GUIDE ===", "system");
                 logMessage("Movement: [Arrow Keys] or 'n', 's', 'e', 'w'");
                 logMessage("Combat: [A] Attack, [Q]/[E] Cast Spells, /flee (run away)");
                 logMessage("Chat: '/say <msg>' (local) | '/shout <msg>' (global) | '/who' (online players)");
                 logMessage("Shortcuts: [M] World Map, [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
-                logMessage("Commands: /map, /look, /gather, /rest, /torch, /time, /attack, /flee, /respawn");
+                logMessage("Commands: /map, /look, /gather, /energy, /rest, /torch, /time, /attack, /flee, /respawn");
             }
             else if (cmd === '/respawn') {
                 let player = gameState.player;
@@ -855,6 +878,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initTradeEventListeners();
     initWorldMapEvents();
     startTimeLoop();
+    updateGatherUI();
     initMultiplayer();
 
     // Start Authentication Flow - Always display Character Selection Modal on login

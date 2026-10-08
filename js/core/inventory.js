@@ -3,6 +3,7 @@ import { gameState, passiveRank } from "./state.js";
 import { ASCII_ITEMS, RECIPES, MATERIALS, generateRandomItem } from "../data/items.js";
 import { logMessage } from "../ui/log.js";
 import { moveEntities } from "./entities.js";
+import { getMaxDailyGathers, getRemainingGathers, updateGatherUI } from "./gathering.js";
 
 export function gainProfessionXP(prof, amount) {
     let player = gameState.player;
@@ -15,6 +16,9 @@ export function gainProfessionXP(prof, amount) {
         p.xp -= p.nextXp;
         p.nextXp = Math.floor(p.nextXp * 1.5);
         logMessage(`*** LEVEL UP! ${prof} is now Level ${p.level}! ***`, "text-yellow-400 font-bold blink");
+        const newMax = getMaxDailyGathers(player);
+        logMessage(`[Crafting Mastery]: Your daily gathering capacity increased to ${newMax}! (+2 daily limit)`, "text-cyan-400 font-bold");
+        updateGatherUI();
     }
 }
 
@@ -322,7 +326,23 @@ export function renderCrafting() {
     let player = gameState.player;
     if (!player.professions) return;
     
-    let headerHtml = `<div class="flex gap-4 mb-4 justify-center flex-wrap">`;
+    let remGathers = getRemainingGathers(player);
+    let maxG = getMaxDailyGathers(player);
+    let bonusG = maxG - 10;
+
+    let headerHtml = `
+        <div class="border border-yellow-800/60 bg-yellow-950/20 p-2 mb-3 rounded flex flex-wrap justify-between items-center text-xs gap-2">
+            <div>
+                <span class="text-yellow-400 font-bold">Daily Gathering Energy:</span>
+                <span class="text-white font-mono font-bold ml-1">${remGathers} / ${maxG} Remaining</span>
+                <span class="text-[10px] text-gray-400 ml-2">(Resets at Dawn 06:00 AM)</span>
+            </div>
+            <div class="text-[10px] text-cyan-300">
+                Base: 10 + Crafting Bonus: <span class="text-yellow-400 font-bold">+${bonusG}</span> (+2 per profession level)
+            </div>
+        </div>
+        <div class="flex gap-4 mb-4 justify-center flex-wrap">
+    `;
     ['Woodworking', 'Metalworking', 'Alchemy', 'Hunting'].forEach(p => {
         let prof = player.professions[p];
         let pct = Math.min(100, (prof.xp / prof.nextXp) * 100);

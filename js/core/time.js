@@ -104,6 +104,8 @@ export function startTimeLoop() {
                 logMessage("Night falls across the realm. Darkness blankets the land.", "text-blue-300");
             } else {
                 logMessage("The sun rises above the horizon. A new day begins.", "text-yellow-300");
+                logMessage("☀️ Dawn breaks across Aethelgard. Daily gathering allowance replenished!", "text-yellow-400 font-bold");
+                if (typeof window !== 'undefined' && window.updateGatherUI) window.updateGatherUI();
             }
             if (window.renderMap) window.renderMap();
         }

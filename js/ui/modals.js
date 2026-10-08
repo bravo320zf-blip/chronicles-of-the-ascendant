@@ -8,6 +8,7 @@ import { renderInventory, closeInventory, renderCrafting, calculateStats, deposi
 import { broadcastPresence } from "../network/multiplayer.js";
 import { renderWorldMapModal } from "./worldMap.js";
 import { getClass } from "../data/classes.js";
+import { getRemainingGathers, getMaxDailyGathers } from "../core/gathering.js";
 
 export function toggleModal(id) {
     const modal = document.getElementById(id);
@@ -81,6 +82,15 @@ export function renderStats() {
             <div class="col-span-2 border-t border-green-900/50 mt-2 pt-2 text-yellow-500 font-bold uppercase tracking-widest text-xs">Wealth</div>
             
             <div><span class="text-gray-400">Gold:</span> <span class="text-yellow-400">${player.gold}g</span></div>
+            <div></div>
+
+            <div class="col-span-2 border-t border-green-900/50 mt-2 pt-2 text-emerald-400 font-bold uppercase tracking-widest text-xs flex justify-between items-center">
+                <span>Gathering & Professions</span>
+                <span class="text-[10px] text-gray-400 font-mono font-normal">(resets daily at dawn 06:00 AM)</span>
+            </div>
+            
+            <div><span class="text-gray-400">Daily Gathering:</span> <span class="text-yellow-400 font-bold font-mono">${getRemainingGathers(player)} / ${getMaxDailyGathers(player)} Left</span></div>
+            <div><span class="text-gray-400">Professions Bonus:</span> <span class="text-cyan-400 font-bold">+${getMaxDailyGathers(player) - 10} Limit</span> <span class="text-[10px] text-gray-500">(+2/lvl)</span></div>
         </div>
     `;
 

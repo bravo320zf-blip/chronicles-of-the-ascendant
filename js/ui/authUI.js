@@ -12,6 +12,7 @@ import { calculateStats } from "../core/inventory.js";
 import { broadcastPresence } from "../network/multiplayer.js";
 import { initExploration } from "./worldMap.js";
 import { getClass } from "../data/classes.js";
+import { updateGatherUI } from "../core/gathering.js";
 
 export function showAuthModal() {
     document.getElementById('auth-modal')?.classList.remove('hidden-ui');
@@ -87,6 +88,7 @@ export function showMainGame() {
     calculateStats();
     initExploration(player);
     renderMap();
+    updateGatherUI();
     updateAccountBadge();
     broadcastPresence();
 }

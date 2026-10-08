@@ -73,6 +73,7 @@ export function createDefaultPlayer() {
         momentumStacks: 0,
         spellbladeActive: 0,
         secondWindUsed: false,
+        gatherState: { day: 0, used: 0 },
         ...TRANSIENT_STATE
     };
 }
