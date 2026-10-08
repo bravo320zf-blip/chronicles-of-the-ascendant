@@ -132,17 +132,22 @@
                 <textarea id="cc-backstory" class="input-term p-2 h-20 resize-none" placeholder="Who are you? What drives you forward?"></textarea>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                 <div>
-                    <label class="block mb-2 text-sm">LOADOUT:</label>
-                    <select id="cc-loadout" class="w-full bg-black border border-green-800 text-green-400 p-2 outline-none">
-                        <option value="warrior">Warrior (Sword & Shield)</option>
-                        <option value="mage">Mage (Staff & Robes)</option>
-                        <option value="rogue">Rogue (Daggers & Cloak)</option>
+                    <label class="block mb-2 text-sm font-bold text-yellow-400">HERO CLASS ARCHETYPE:</label>
+                    <select id="cc-loadout" class="w-full bg-black border border-green-800 text-green-400 p-2 outline-none font-bold">
+                        <option value="paladin" selected>★ Paladin — Holy Crusader</option>
+                        <option value="berserker">⚔ Berserker — Primal Bloodreaver</option>
+                        <option value="pyromancer">☼ Pyromancer — Flame Sorcerer</option>
+                        <option value="shadowblade">§ Shadowblade — Night Infiltrator</option>
+                        <option value="frost_knight">∆ Frost Knight — Glacial Warden</option>
+                        <option value="ranger">Ψ Ranger — Wilderness Marksman</option>
+                        <option value="necromancer">Ѫ Necromancer — Dark Occultist</option>
+                        <option value="stormcaller">⚡ Stormcaller — Tempest Shaman</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block mb-2 text-sm">STARTING CONTINENT & CITY:</label>
+                    <label class="block mb-2 text-sm font-bold text-cyan-400">STARTING CONTINENT & CITADEL:</label>
                     <select id="cc-city" class="w-full bg-black border border-green-800 text-green-400 p-2 outline-none font-mono text-xs">
                         <option value="0">Oakhaven — Sylva (Verdant Elderwood)</option>
                         <option value="1">Mirage Edge — Solaris (Scorched Sands)</option>
@@ -152,6 +157,11 @@
                         <option value="5">Embergard — Ashen Reach (Mount Caldera)</option>
                     </select>
                 </div>
+            </div>
+
+            <!-- DYNAMIC CLASS PLAYSTYLES & GEAR PREVIEW -->
+            <div id="cc-class-preview" class="border border-green-900 bg-zinc-950/80 p-3 rounded mb-4 text-xs">
+                <!-- Injected via JavaScript based on selected class -->
             </div>
 
             <div class="flex gap-4">
@@ -196,7 +206,7 @@
                 
                 <!-- QUICK TOUCH / MOUSE CONTROLS -->
                 <div class="grid grid-cols-3 gap-1 mb-2">
-                    <button class="btn-term p-1 text-[10px] text-emerald-400 border-emerald-900 hover:bg-emerald-900/30 font-bold" onclick="toggleModal('worldmap-modal')">MAP [M]</button>
+                    <button class="btn-term p-1 text-[10px] text-emerald-400 border-emerald-900 hover:bg-emerald-900/30 font-bold" onclick="toggleWorldMap()">MAP [M]</button>
                     <button class="btn-term p-1" onclick="movePlayer(0, -1)">▲ N</button>
                     <button class="btn-term p-1 text-[10px]" onclick="toggleTorch()" id="btn-torch">TORCH [F]</button>
                     
@@ -233,7 +243,7 @@
             <button class="btn-term text-sm border-cyan-700 text-cyan-400 hover:bg-cyan-900/30" onclick="toggleModal('crafting-modal')">Crafting [R]</button>
             <button class="btn-term text-sm" onclick="toggleModal('passive-modal')">Passive Tree [P]</button>
             <button class="btn-term text-sm" onclick="toggleModal('journal-modal')">Journal [J]</button>
-            <button class="btn-term text-sm border-emerald-700 text-emerald-400 hover:bg-emerald-900/30 font-bold" onclick="toggleModal('worldmap-modal')">World Map [M]</button>
+            <button class="btn-term text-sm border-emerald-700 text-emerald-400 hover:bg-emerald-900/30 font-bold" onclick="toggleWorldMap()">World Map [M]</button>
             <button class="btn-term text-sm text-yellow-400 border-yellow-900 hover:bg-yellow-900/30" onclick="executeAction('rest')">Rest</button>
         </div>
     </div>
@@ -557,7 +567,7 @@
                     <h2 class="text-xl md:text-2xl font-bold text-emerald-400 tracking-wider">CARTOGRAPHIC ATLAS OF AETHELGARD</h2>
                     <span id="wm-explored-badge" class="bg-emerald-950/70 border border-emerald-700 text-emerald-300 text-xs px-2 py-0.5 rounded font-mono">0.0% Explored</span>
                 </div>
-                <button class="text-red-500 hover:text-red-400 font-bold text-lg px-2" onclick="toggleModal('worldmap-modal')">[X]</button>
+                <button class="text-red-500 hover:text-red-400 font-bold text-lg px-2" onclick="toggleWorldMap()">[X]</button>
             </div>
 
             <!-- CONTROLS & INFO BAR -->
@@ -589,6 +599,6 @@
         </div>
     </div>
 
-<script type="module" src="js/main.js?v=2.5"></script>
+<script type="module" src="js/main.js?v=3.0"></script>
 </body>
 </html>

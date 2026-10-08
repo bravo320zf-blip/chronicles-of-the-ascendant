@@ -11,6 +11,7 @@ import { logMessage } from "./log.js";
 import { calculateStats } from "../core/inventory.js";
 import { broadcastPresence } from "../network/multiplayer.js";
 import { initExploration } from "./worldMap.js";
+import { getClass } from "../data/classes.js";
 
 export function showAuthModal() {
     document.getElementById('auth-modal')?.classList.remove('hidden-ui');
@@ -113,7 +114,7 @@ export function renderCharacterList(characters = []) {
                                 <span class="text-[10px] text-gray-500 uppercase font-mono tracking-wider">Slot ${slotIdx + 1}</span>
                             </div>
                         </div>
-                        <span class="text-xs uppercase bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-800">Lvl ${char.level || 1} ${char.loadout || 'Adventurer'}</span>
+                        <span class="text-xs uppercase bg-green-900/40 text-green-300 px-2 py-0.5 rounded border border-green-800">Lvl ${char.level || 1} ${getClass(char.loadout).name}</span>
                     </div>
                     <div class="text-xs text-gray-400 space-y-1 mb-3">
                         <div><span class="text-gray-500">Origin City:</span> ${city.name}</div>

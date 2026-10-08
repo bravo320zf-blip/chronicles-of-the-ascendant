@@ -50,7 +50,7 @@ export function calculateStats() {
     
     if(player.hp > player.maxHp) player.hp = player.maxHp;
     if(player.mp > player.maxMp) player.mp = player.maxMp;
-    if (window.updateStatus) window.updateStatus();
+    if (typeof window !== 'undefined' && window.updateStatus) window.updateStatus();
 }
 
 export function renderInventory() {

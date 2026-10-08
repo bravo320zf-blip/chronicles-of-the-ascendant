@@ -7,6 +7,7 @@ import { logMessage } from "./log.js";
 import { renderInventory, closeInventory, renderCrafting, calculateStats, depositItem, withdrawItem } from "../core/inventory.js";
 import { broadcastPresence } from "../network/multiplayer.js";
 import { renderWorldMapModal } from "./worldMap.js";
+import { getClass } from "../data/classes.js";
 
 export function toggleModal(id) {
     const modal = document.getElementById(id);
@@ -31,10 +32,24 @@ export function renderStats() {
     let player = gameState.player;
     const container = document.getElementById('stats-content');
     if (!container) return;
+    const cInfo = getClass(player.loadout);
     container.innerHTML = `
         <div class="grid grid-cols-2 gap-4">
             <div><span class="text-gray-400">Name:</span> <span class="text-green-400 font-bold">${player.name}</span></div>
-            <div><span class="text-gray-400">Class:</span> <span class="text-green-400 font-bold capitalize">${player.loadout || 'Adventurer'}</span></div>
+            <div><span class="text-gray-400">Class:</span> <span class="text-yellow-400 font-bold">${cInfo.name}</span> <span class="text-[11px] text-gray-500">(${cInfo.tagline})</span></div>
+            
+            <div class="col-span-2 bg-zinc-950 border border-green-950 p-2 rounded text-xs">
+                <span class="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Class Playstyles:</span>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1">
+                    ${cInfo.playstyles.map(p => `
+                        <div class="border border-green-900/60 bg-black/60 p-1.5 rounded">
+                            <div class="text-yellow-300 font-bold text-[11px]">${p.name}</div>
+                            <div class="text-[10px] text-cyan-400">${p.role}</div>
+                            <div class="text-[9px] text-gray-400 leading-tight mt-0.5">${p.desc}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
             
             <div class="col-span-2 border-t border-green-900/50 mt-2 pt-2 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
@@ -227,16 +242,34 @@ export function renderSkills() {
     if (!modal) return;
     let panel = modal.querySelector('.panel');
 
+    const cInfo = getClass(player.loadout);
+
     let html = `
-        <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-4 shrink-0">
-            <h2 class="text-xl font-bold text-cyan-400">SPELLS & SKILLS</h2>
+        <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-3 shrink-0">
+            <div>
+                <h2 class="text-xl font-bold text-cyan-400">SPELLS & SKILLS</h2>
+                <div class="text-[11px] text-gray-400">Class: <span class="text-yellow-400 font-bold">${cInfo.name}</span> — ${cInfo.tagline}</div>
+            </div>
             <div class="flex items-center gap-4">
                 <span class="text-yellow-400 font-bold tracking-widest text-sm bg-yellow-900/20 px-3 py-1 border border-yellow-900">SKILL POINTS: <span>${player.skillPoints || 0}</span></span>
                 <button class="text-red-500 hover:text-red-400 font-bold" onclick="toggleModal('skills-modal')">[X]</button>
             </div>
         </div>
+
+        <!-- CLASS PLAYSTYLES BANNER -->
+        <div class="mb-3 p-2 bg-zinc-950 border border-green-900/80 rounded shrink-0">
+            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Class Playstyle Synergies:</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                ${cInfo.playstyles.map(p => `
+                    <div class="border border-green-900/40 bg-black/50 p-1.5 rounded">
+                        <span class="text-yellow-300 font-bold text-[11px]">${p.name}</span>
+                        <span class="text-[10px] text-cyan-400 ml-1">(${p.role})</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
         
-        <div class="mb-4 p-4 border border-cyan-900 bg-cyan-900/10 shrink-0">
+        <div class="mb-3 p-3 border border-cyan-900 bg-cyan-900/10 shrink-0">
             <h3 class="text-cyan-400 font-bold mb-2 tracking-widest text-xs">ASSIGNED HOTKEYS</h3>
             <div class="grid grid-cols-2 gap-4">
                 <div class="text-center p-2 border border-gray-700 bg-black cursor-pointer hover:border-gray-500 transition-colors" onclick="useActiveSkill(player.hotkeys.q)">
@@ -251,10 +284,14 @@ export function renderSkills() {
             <div class="text-[10px] text-gray-500 mt-2 text-center">Press Q or E on your keyboard during combat or exploration to instantly cast.</div>
         </div>
         
-        <div class="flex-1 overflow-y-auto log-container pr-2 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
+        <div class="flex-1 overflow-y-auto log-container pr-2 pb-4 space-y-4">
     `;
 
-    ACTIVES.forEach(s => {
+    // 1. Class Specialized Abilities
+    const classSkillList = ACTIVES.filter(s => cInfo.classSkills.includes(s.id));
+    const universalSkillList = ACTIVES.filter(s => !cInfo.classSkills.includes(s.id));
+
+    const renderCard = (s, isClassSkill) => {
         let unlocked = player.unlockedActives.includes(s.id);
         let btnHtml = '';
         
@@ -274,11 +311,23 @@ export function renderSkills() {
             btnHtml = `<button class="w-full mt-2 text-[10px] uppercase font-bold tracking-widest py-1 ${player.skillPoints > 0 ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 'bg-gray-800 text-gray-500'}" onclick="unlockSkill('${s.id}')">UNLOCK (1 SP)</button>`;
         }
 
-        html += `
-            <div class="border ${unlocked ? 'border-cyan-900' : 'border-green-900/30'} p-3 bg-black/60 flex flex-col justify-between min-h-[110px]">
+        // Find which playstyle favors this skill
+        let playstyleTag = '';
+        const favoredStyle = cInfo.playstyles.find(p => p.favoredSkills && p.favoredSkills.includes(s.id));
+        if (favoredStyle) {
+            playstyleTag = `<span class="text-[9px] text-yellow-400 border border-yellow-900/80 bg-yellow-950/40 px-1 py-0.2 rounded font-mono ml-1">${favoredStyle.name}</span>`;
+        } else if (isClassSkill) {
+            playstyleTag = `<span class="text-[9px] text-green-400 border border-green-900/80 bg-green-950/40 px-1 py-0.2 rounded font-mono ml-1">${cInfo.name}</span>`;
+        }
+
+        return `
+            <div class="border ${isClassSkill ? (unlocked ? 'border-yellow-700 bg-yellow-950/10' : 'border-green-900/60 bg-black/60') : (unlocked ? 'border-cyan-900 bg-black/60' : 'border-gray-900 bg-black/40')} p-3 rounded flex flex-col justify-between min-h-[115px]">
                 <div>
                     <div class="flex justify-between items-start border-b border-gray-800 pb-1 mb-1">
-                        <span class="font-bold ${unlocked ? 'text-cyan-400' : 'text-gray-500'}">${s.name} ${unlocked ? `<span class="text-xs text-yellow-500">(Lvl ${player.skillLevels?.[s.id] || 1})</span>` : ''} ${unlocked && player.cooldowns && player.cooldowns[s.id] > 0 ? `<span class="text-yellow-500 text-xs ml-1">(CD: ${player.cooldowns[s.id]})</span>` : ''}</span>
+                        <div class="flex items-center flex-wrap gap-1">
+                            <span class="font-bold ${unlocked ? (isClassSkill ? 'text-yellow-400' : 'text-cyan-400') : 'text-gray-500'}">${s.name} ${unlocked ? `<span class="text-xs text-yellow-500">(Lvl ${player.skillLevels?.[s.id] || 1})</span>` : ''} ${unlocked && player.cooldowns && player.cooldowns[s.id] > 0 ? `<span class="text-yellow-500 text-xs ml-1">(CD: ${player.cooldowns[s.id]})</span>` : ''}</span>
+                            ${playstyleTag}
+                        </div>
                         <span class="text-blue-400 font-bold text-xs shrink-0">${s.cost > 0 ? s.cost + ' MP' : s.cd + ' Turn CD'}</span>
                     </div>
                     <div class="text-[10px] text-gray-400 mt-1 leading-tight">${s.desc}</div>
@@ -286,9 +335,30 @@ export function renderSkills() {
                 ${btnHtml}
             </div>
         `;
-    });
+    };
 
-    html += `</div>`;
+    html += `
+        <div>
+            <div class="text-xs font-bold text-yellow-400 uppercase tracking-widest border-b border-yellow-900/60 pb-1 mb-2 flex items-center justify-between">
+                <span>★ ${cInfo.name} Specialized Abilities</span>
+                <span class="text-[10px] text-gray-400 font-mono">${classSkillList.length} Class Spells</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${classSkillList.map(s => renderCard(s, true)).join('')}
+            </div>
+        </div>
+
+        <div class="pt-2">
+            <div class="text-xs font-bold text-cyan-400 uppercase tracking-widest border-b border-cyan-900/60 pb-1 mb-2 flex items-center justify-between">
+                <span>✦ Cross-Realm & Universal Grimoire</span>
+                <span class="text-[10px] text-gray-400 font-mono">${universalSkillList.length} Other Spells</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${universalSkillList.map(s => renderCard(s, false)).join('')}
+            </div>
+        </div>
+    </div>`;
+
     panel.innerHTML = html;
     panel.className = "panel w-full max-w-4xl max-h-[90vh] flex flex-col p-6"; 
 }
@@ -340,7 +410,34 @@ export function renderPassives() {
     const container = document.getElementById('passive-content');
     if(!container) return;
     
-    let html = '';
+    const cInfo = getClass(player.loadout);
+
+    let html = `
+        <!-- CLASS PASSIVE SYNERGIES HEADER -->
+        <div class="col-span-full border border-green-900/80 bg-zinc-950 p-3 rounded mb-3">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-yellow-400 font-bold text-sm">${cInfo.name} Playstyle Passives</span>
+                <span class="text-xs text-gray-400 font-mono">Skill Points: <span class="text-yellow-400 font-bold">${player.skillPoints || 0}</span></span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                ${cInfo.playstyles.map(p => {
+                    const passivesList = p.favoredPassives.map(pid => {
+                        const pObj = PASSIVES.find(x => x.id === pid);
+                        const lvl = player.passives[pid] || 0;
+                        return `<span class="px-1.5 py-0.5 rounded text-[10px] ${lvl > 0 ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-700' : 'bg-black/60 text-gray-400 border border-gray-800'}">${pObj ? pObj.name : pid} (${lvl}/${pObj ? pObj.max : 1})</span>`;
+                    }).join(' ');
+                    return `
+                        <div class="border border-green-900/50 bg-black/60 p-2 rounded">
+                            <div class="text-yellow-300 font-bold text-xs">${p.name}</div>
+                            <div class="text-[10px] text-cyan-400 mb-1">${p.role}</div>
+                            <div class="flex flex-wrap gap-1 mt-1">${passivesList}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
     ['Combat', 'Defense', 'Utility'].forEach(cat => {
         html += `<div class="flex flex-col gap-3">
             <h3 class="text-cyan-400 border-b border-cyan-900 pb-1 mb-1 font-bold uppercase tracking-widest sticky top-0 bg-black/90 z-10">${cat}</h3>`;
@@ -348,14 +445,15 @@ export function renderPassives() {
         PASSIVES.filter(p => p.category === cat).forEach(p => {
             let lvl = player.passives[p.id] || 0;
             let maxed = lvl >= p.max;
-            let borderColor = maxed ? 'border-yellow-600' : (lvl > 0 ? 'border-green-600' : 'border-gray-800');
-            let titleColor = lvl > 0 ? 'text-green-400' : 'text-gray-400';
+            let isClassFavored = cInfo.classPassives && cInfo.classPassives.includes(p.id);
+            let borderColor = maxed ? 'border-yellow-600' : (lvl > 0 ? 'border-green-600' : (isClassFavored ? 'border-green-900/80' : 'border-gray-800'));
+            let titleColor = lvl > 0 ? 'text-green-400' : (isClassFavored ? 'text-yellow-200' : 'text-gray-400');
             
             html += `
-                <div class="border ${borderColor} p-3 bg-black/60 flex flex-col justify-between transition-colors hover:bg-gray-900 min-h-[90px]">
+                <div class="border ${borderColor} p-3 ${isClassFavored ? 'bg-green-950/10' : 'bg-black/60'} flex flex-col justify-between transition-colors hover:bg-gray-900 min-h-[90px] rounded">
                     <div>
                         <div class="flex justify-between items-start mb-1">
-                            <span class="font-bold ${titleColor}">${p.name} <span class="text-xs text-gray-500">(${lvl}/${p.max})</span></span>
+                            <span class="font-bold ${titleColor}">${p.name} <span class="text-xs text-gray-500">(${lvl}/${p.max})</span> ${isClassFavored ? '<span class="text-[9px] text-yellow-400 border border-yellow-900/80 bg-yellow-950/40 px-1 rounded ml-1 font-mono">CLASS</span>' : ''}</span>
                         </div>
                         <div class="text-[10px] text-gray-400 leading-tight">${p.desc}</div>
                     </div>

@@ -193,6 +193,11 @@ export function resolveSkillHit(skill, tx, ty, caster, lMap) {
             case 'shadow_step': baseDmg = 25 + pDex * 2; break;
             case 'vampiric_touch': baseDmg = 20 + pInt; baseHeal = 20 + pInt; break;
             case 'time_warp': baseDmg = 100 + pInt * 2; skipEnemyTurn = true; break;
+            case 'aimed_shot': baseDmg = Math.floor(30 + pDex * 2.5); break;
+            case 'corpse_explosion': baseDmg = 50 + pInt * 2; break;
+            case 'chain_lightning': baseDmg = Math.floor(50 + pInt * 1.5); break;
+            case 'ice_barrier': if (caster === 'player') { player.shield = (player.shield || 0) + 40; logMessage("Rime ice envelops you in a +40 protective barrier!", "text-cyan-400"); } break;
+            case 'ignite': baseDmg = 20 + pInt; if (t.data) t.data.bleed = (t.data.bleed || 0) + 15; break;
         }
 
         if (sLvl > 1) {

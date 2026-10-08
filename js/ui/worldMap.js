@@ -90,11 +90,13 @@ export function initExploration(player) {
     if (!player) return;
     activeExploration = new ExplorationBitset(player.exploredMap);
     
-    // Automatically reveal starter area around player starting coordinates
-    const sx = player.worldX || 135;
-    const sy = player.worldY || 85;
-    activeExploration.revealCircle(sx, sy, 14);
-    player.exploredMap = activeExploration.serialize();
+    // Automatically reveal starter area if newly loaded or empty
+    if (activeExploration.countExplored() === 0) {
+        const sx = (player.worldX !== undefined && player.worldX !== null) ? player.worldX : (player.x || 135);
+        const sy = (player.worldY !== undefined && player.worldY !== null) ? player.worldY : (player.y || 85);
+        activeExploration.revealCircle(sx, sy, 14);
+        player.exploredMap = activeExploration.serialize();
+    }
 }
 
 export function revealWorldArea(cx, cy, radius = 10) {
@@ -161,8 +163,16 @@ export function renderWorldMapModal() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Ensure world generation is ready
+    if (!gameState.worldMap || gameState.worldMap.length === 0) {
+        if (window.generateWorld) window.generateWorld();
+    }
+
     const player = gameState.player;
-    if (!activeExploration) initExploration(player);
+    if (!player) return;
+    if (!activeExploration || activeExploration.countExplored() === 0) {
+        initExploration(player);
+    }
 
     const stats = getExplorationStats();
     const badgeEl = document.getElementById('wm-explored-badge');
@@ -375,4 +385,40 @@ export function initWorldMapEvents() {
             });
         });
     }
+
+    const modal = document.getElementById('worldmap-modal');
+    if (modal) {
+        const observer = new MutationObserver(() => {
+            if (!modal.classList.contains('hidden-ui')) {
+                renderWorldMapModal();
+            }
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    }
 }
+
+export function openWorldMap() {
+    const modal = document.getElementById('worldmap-modal');
+    if (modal) {
+        modal.classList.remove('hidden-ui');
+        renderWorldMapModal();
+    }
+}
+
+export function toggleWorldMap() {
+    const modal = document.getElementById('worldmap-modal');
+    if (modal) {
+        if (modal.classList.contains('hidden-ui')) {
+            modal.classList.remove('hidden-ui');
+            renderWorldMapModal();
+        } else {
+            modal.classList.add('hidden-ui');
+        }
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.openWorldMap = openWorldMap;
+    window.toggleWorldMap = toggleWorldMap;
+}
+

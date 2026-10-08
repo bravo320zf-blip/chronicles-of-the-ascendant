@@ -13,12 +13,13 @@ import { calculateStats, renderInventory, closeInventory, sortInventory, useItem
 import { toggleModal, renderStats, renderJournal, renderStash, renderSkills, unlockSkill, upgradeSkill, assignHotkey, renderPassives, upgradePassive } from "./ui/modals.js";
 import { showAuthModal, showCharSelectModal, showCharCreationModal, showMainGame, initAuthUIEvents, updateAccountBadge } from "./ui/authUI.js";
 import { openPlayerInteraction, closePlayerInteraction, inviteToParty, startTrade, cancelTrade, showEmoteList, performEmote, initTradeEventListeners } from "./ui/trade.js";
-import { initExploration, revealWorldArea, renderWorldMapModal, initWorldMapEvents } from "./ui/worldMap.js";
+import { initExploration, revealWorldArea, renderWorldMapModal, initWorldMapEvents, openWorldMap, toggleWorldMap } from "./ui/worldMap.js";
 import { CITIES } from "./data/worldData.js";
 import { MATERIALS, generateRandomItem } from "./data/items.js";
 import { LOCAL_TILES } from "./data/terrain.js";
 import { WORLD_SIZE, LOCAL_SIZE } from "./data/constants.js";
 import { passiveRank } from "./core/state.js";
+import { getClass } from "./data/classes.js";
 
 // ==========================================
 // EXPOSE CORE FUNCTIONS TO GLOBAL WINDOW API
@@ -66,6 +67,8 @@ window.showEmoteList = showEmoteList;
 window.performEmote = performEmote;
 window.attemptFlee = attemptFlee;
 window.renderWorldMapModal = renderWorldMapModal;
+window.openWorldMap = openWorldMap;
+window.toggleWorldMap = toggleWorldMap;
 window.switchCharacter = async function() {
     await flushSave();
     const chars = await loadUserCharacters(gameState.currentUser?.uid);
@@ -530,7 +533,7 @@ function initCommandInput() {
             else if (['w', 'west'].includes(cmd.toLowerCase())) movePlayer(-1, 0);
             else if (['e', 'east'].includes(cmd.toLowerCase())) movePlayer(1, 0);
             else if (['/flee', 'flee', '/run', 'run', '/escape', 'escape'].includes(cmd.toLowerCase())) attemptFlee();
-            else if (['/map', 'map', '/worldmap', 'worldmap'].includes(cmd.toLowerCase())) toggleModal('worldmap-modal');
+            else if (['/map', 'map', '/worldmap', 'worldmap'].includes(cmd.toLowerCase())) toggleWorldMap();
             else if (cmd === '/attack' || cmd === 'attack' || cmd === 'a') executeAction('attack');
             else if (cmd === '/time' || cmd === 'time' || cmd === '/clock' || cmd === 'clock') {
                 let m = getGlobalWorldTimeMinutes();
@@ -658,7 +661,7 @@ function initKeyboardControls() {
             case 'f': toggleTorch(); break;
             case 'q': if(player.hotkeys && player.hotkeys.q) useActiveSkill(player.hotkeys.q); break;
             case 'e': if(player.hotkeys && player.hotkeys.e) useActiveSkill(player.hotkeys.e); break;
-            case 'm': toggleModal('worldmap-modal'); break;
+            case 'm': toggleWorldMap(); break;
             case 'escape':
                 ['stats-modal', 'inventory-modal', 'skills-modal', 'crafting-modal', 'passive-modal', 'journal-modal', 'stash-modal', 'settings-modal', 'player-interact-modal', 'trade-modal', 'worldmap-modal'].forEach(m => {
                     document.getElementById(m)?.classList.add('hidden-ui');
@@ -692,6 +695,82 @@ function initCharacterCreation() {
     symSelect?.addEventListener('change', updatePreview);
     symSelect?.addEventListener('input', updatePreview);
 
+    // Dynamic Class Archetype Preview & Playstyles
+    const renderClassPreview = (classId) => {
+        const previewEl = document.getElementById('cc-class-preview');
+        if (!previewEl) return;
+        const cInfo = getClass(classId);
+
+        let playstylesHtml = cInfo.playstyles.map(p => `
+            <div class="border border-green-900/60 bg-black/60 p-2 rounded">
+                <div class="flex justify-between items-center mb-0.5">
+                    <span class="text-yellow-300 font-bold text-xs">${p.name}</span>
+                    <span class="text-[10px] text-cyan-400 font-mono">${p.role}</span>
+                </div>
+                <div class="text-[10px] text-gray-400 leading-tight">${p.desc}</div>
+            </div>
+        `).join('');
+
+        let eq = cInfo.starterEquipment;
+        let gearList = [];
+        if (eq.rightHand) gearList.push(`Weapon: <span class="text-white font-bold">${eq.rightHand.name}</span> (${eq.rightHand.desc})`);
+        if (eq.leftHand) gearList.push(`Offhand: <span class="text-white font-bold">${eq.leftHand.name}</span> (${eq.leftHand.desc})`);
+        if (eq.chest) gearList.push(`Armor: <span class="text-white font-bold">${eq.chest.name}</span> (${eq.chest.desc})`);
+        if (eq.leftFinger || eq.rightFinger) {
+            let ring = eq.leftFinger || eq.rightFinger;
+            gearList.push(`Ring: <span class="text-white font-bold">${ring.name}</span> (${ring.desc})`);
+        }
+        if (eq.back) gearList.push(`Cloak: <span class="text-white font-bold">${eq.back.name}</span> (${eq.back.desc})`);
+        if (eq.head) gearList.push(`Head: <span class="text-white font-bold">${eq.head.name}</span> (${eq.head.desc})`);
+
+        previewEl.innerHTML = `
+            <div class="flex justify-between items-center border-b border-green-900 pb-2 mb-2">
+                <div>
+                    <span class="text-sm font-bold text-yellow-400">${cInfo.name}</span>
+                    <span class="text-[11px] text-green-300 ml-2">— ${cInfo.tagline}</span>
+                </div>
+                <div class="text-[10px] text-cyan-300 font-mono">
+                    STR ${cInfo.baseStats.str} | DEX ${cInfo.baseStats.dex} | INT ${cInfo.baseStats.int} | CON ${cInfo.baseStats.con}
+                </div>
+            </div>
+
+            <div class="text-[11px] text-gray-300 italic mb-2">${cInfo.desc}</div>
+
+            <div class="mb-2">
+                <div class="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1">3 Distinct Playstyles:</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    ${playstylesHtml}
+                </div>
+            </div>
+
+            <div class="border-t border-green-900/60 pt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                <div>
+                    <span class="text-green-400 font-bold block mb-0.5">Starter Equipment Loadout:</span>
+                    <ul class="text-gray-300 space-y-0.5 list-disc list-inside text-[10px]">
+                        ${gearList.map(g => `<li>${g}</li>`).join('')}
+                    </ul>
+                </div>
+                <div>
+                    <span class="text-cyan-400 font-bold block mb-0.5">Starter Active Spells & Hotkeys:</span>
+                    <div class="flex gap-2 mb-1">
+                        <span class="bg-black border border-yellow-700 px-2 py-0.5 rounded text-[10px] text-yellow-300 font-mono">[Q] ${cInfo.starterActives[0] ? cInfo.starterActives[0].replace(/_/g, ' ').toUpperCase() : 'None'}</span>
+                        <span class="bg-black border border-yellow-700 px-2 py-0.5 rounded text-[10px] text-yellow-300 font-mono">[E] ${cInfo.starterActives[1] ? cInfo.starterActives[1].replace(/_/g, ' ').toUpperCase() : 'None'}</span>
+                    </div>
+                    <span class="text-purple-400 font-bold block mt-1 mb-0.5">Starter Passives:</span>
+                    <div class="text-[10px] text-gray-400">
+                        ${Object.keys(cInfo.starterPassives).map(p => `<span class="text-purple-300 font-mono">${p.replace(/_/g, ' ').toUpperCase()}</span>`).join(', ')}
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    const loadoutSelect = document.getElementById('cc-loadout');
+    loadoutSelect?.addEventListener('change', () => {
+        renderClassPreview(loadoutSelect.value);
+    });
+    renderClassPreview(loadoutSelect?.value || 'paladin');
+
     document.getElementById('btn-start-game')?.addEventListener('click', async () => {
         try {
             const chars = await loadUserCharacters(gameState.currentUser?.uid);
@@ -715,27 +794,20 @@ function initCharacterCreation() {
             let cityIdx = parseInt(document.getElementById('cc-city')?.value);
             if (isNaN(cityIdx) || cityIdx < 0 || cityIdx >= CITIES.length) cityIdx = 4;
             newChar.boundCity = cityIdx;
-            newChar.loadout = document.getElementById('cc-loadout')?.value || 'warrior';
 
-            newChar.equipment.light = { id: 'torch', category: 'consumable', type: 'consumable', name: 'Pine Torch', life: 100, maxLife: 100, rarity: 'Basic', stats: {}, desc: 'Provides light. Decays over time.', price: 15 };
+            // Apply Chosen Class Archtype, Loadout & Abilities
+            const chosenClassId = document.getElementById('cc-loadout')?.value || 'paladin';
+            const cInfo = getClass(chosenClassId);
 
-            if (newChar.loadout === 'warrior') {
-                newChar.equipment.rightHand = { id: 'sword', name: 'Iron Sword', rarity: 'Basic', stats: { atk: 2 }, count: 1, desc: '+2 ATK', price: 15 };
-                newChar.equipment.leftHand = { id: 'shield', name: 'Wooden Shield', rarity: 'Basic', stats: { def: 2 }, count: 1, desc: '+2 DEF', price: 15 };
-                newChar.equipment.chest = { id: 'armor', name: 'Leather Armor', rarity: 'Basic', stats: { def: 3 }, count: 1, desc: '+3 DEF', price: 20 };
-                newChar.unlockedActives.push('power_strike');
-                newChar.hotkeys.q = 'power_strike';
-            } else if (newChar.loadout === 'mage') {
-                newChar.equipment.rightHand = { id: 'staff', name: 'Oak Staff', rarity: 'Basic', stats: { atk: 1, int: 2 }, count: 1, desc: '+1 ATK, +2 INT', price: 15 };
-                newChar.equipment.chest = { id: 'cloak', name: 'Scholar Robes', rarity: 'Basic', stats: { def: 1, int: 1 }, count: 1, desc: '+1 DEF, +1 INT', price: 15 };
-                newChar.unlockedActives.push('fireball');
-                newChar.hotkeys.q = 'fireball';
-            } else if (newChar.loadout === 'rogue') {
-                newChar.equipment.rightHand = { id: 'dagger', name: 'Steel Dagger', rarity: 'Basic', stats: { atk: 2, dex: 1 }, count: 1, desc: '+2 ATK, +1 DEX', price: 15 };
-                newChar.equipment.back = { id: 'cloak', name: 'Shadow Cloak', rarity: 'Basic', stats: { def: 1, dex: 2 }, count: 1, desc: '+1 DEF, +2 DEX', price: 15 };
-                newChar.unlockedActives.push('backstab');
-                newChar.hotkeys.q = 'backstab';
-            }
+            newChar.loadout = cInfo.id;
+            newChar.baseStats = { ...cInfo.baseStats };
+            newChar.equipment = JSON.parse(JSON.stringify(cInfo.starterEquipment));
+            newChar.inventory = JSON.parse(JSON.stringify(cInfo.starterInventory));
+            newChar.unlockedActives = [...cInfo.starterActives];
+            newChar.hotkeys = { ...cInfo.starterHotkeys };
+            newChar.skillLevels = {};
+            newChar.unlockedActives.forEach(sk => { newChar.skillLevels[sk] = 1; });
+            newChar.passives = { ...cInfo.starterPassives };
 
             let startCity = CITIES[cityIdx];
             newChar.x = startCity.x; 
@@ -753,7 +825,7 @@ function initCharacterCreation() {
 
             await flushSave();
             showMainGame();
-            logMessage(`Welcome to the realm, ${name}.`, "success");
+            logMessage(`Welcome to the realm, ${name} the ${cInfo.name}.`, "success");
             logMessage(`[Avatar]: Your map glyph is "${newChar.symbol}". (Press [C] anytime to change)`, "text-cyan-400");
         } catch (err) {
             console.error('Character start failed', err);

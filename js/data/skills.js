@@ -65,5 +65,10 @@ export const ACTIVES = [
     { id: 'cleansing_flame', name: 'Cleansing Flame', cost: 20, cd: 0, type: 'utility', targetType: 'self', range: 0, desc: 'Heals 25 HP and restores 10 MP.' },
     { id: 'shadow_step', name: 'Shadow Step', cost: 0, cd: 4, type: 'combat', targetType: 'enemy', range: 4, desc: 'Teleport strike dealing 25 + (DEX * 2) sudden damage.' },
     { id: 'vampiric_touch', name: 'Vampiric Touch', cost: 20, cd: 0, type: 'combat', targetType: 'enemy', range: 1, desc: 'Deals 20 + INT damage, heals 20 + INT HP.' },
-    { id: 'time_warp', name: 'Time Warp', cost: 50, cd: 0, type: 'combat', targetType: 'enemy', range: 5, speed: 4, projChar: '∞', projColor: '#aaaaff', desc: 'Deals 100 + (INT * 2) damage and freezes time (skips turn).' }
+    { id: 'time_warp', name: 'Time Warp', cost: 50, cd: 0, type: 'combat', targetType: 'enemy', range: 5, speed: 4, projChar: '∞', projColor: '#aaaaff', desc: 'Deals 100 + (INT * 2) damage and freezes time (skips turn).' },
+    { id: 'aimed_shot', name: 'Aimed Shot', cost: 0, cd: 3, type: 'combat', targetType: 'enemy', range: 6, speed: 4, projChar: '🏹', projColor: '#ffffaa', desc: 'Precise sniper shot dealing 30 + (DEX * 2.5) damage.' },
+    { id: 'corpse_explosion', name: 'Corpse Explosion', cost: 25, cd: 0, type: 'combat', targetType: 'aoe', range: 5, aoeRadius: 1, speed: 3, projChar: '☠', projColor: '#aa33aa', desc: 'Detonates necrotic miasma dealing 50 + (INT * 2) shadow damage in a 3x3 area.' },
+    { id: 'chain_lightning', name: 'Chain Lightning', cost: 30, cd: 0, type: 'combat', targetType: 'multi', range: 5, maxTargets: 3, speed: 4, projChar: '⚡', projColor: '#ffff55', desc: 'Fires arcing lightning hitting up to 3 targets for 50 + (INT * 1.5) damage.' },
+    { id: 'ice_barrier', name: 'Ice Barrier', cost: 20, cd: 5, type: 'utility', targetType: 'self', range: 0, desc: 'Encases yourself in rime ice, granting +40 temporary shield.' },
+    { id: 'ignite', name: 'Ignite', cost: 15, cd: 0, type: 'combat', targetType: 'enemy', range: 5, speed: 2, projChar: '🔥', projColor: '#ff4400', desc: 'Deals 20 + INT damage and inflicts 15 bleed/burn damage over time.' }
 ];
