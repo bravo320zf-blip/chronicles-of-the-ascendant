@@ -29,13 +29,13 @@ export const SFX_TRACKS = {
 
 // Continental coordinates for overworld biome identification
 const CONTINENTS = [
-    { id: 'T', cx: 55, cy: 38, rx: 36, ry: 24, name: "Glacial Reach" },
-    { id: 'F', cx: 48, cy: 92, rx: 28, ry: 30, name: "Verdant Elderwood" },
-    { id: 'P', cx: 135, cy: 85, rx: 38, ry: 32, name: "Imperial Crownland" },
-    { id: 'S', cx: 48, cy: 152, rx: 28, ry: 26, name: "The Shadowmire" },
-    { id: 'D', cx: 152, cy: 152, rx: 34, ry: 28, name: "Scorched Sands" },
-    { id: '#', cx: 100, cy: 165, rx: 20, ry: 18, name: "Mount Caldera" },
-    { id: 'Ω', cx: 98, cy: 92, rx: 11, ry: 11, name: "Sacred Isle" }
+    { id: 'T', cx: 165, cy: 114, rx: 108, ry: 72, name: "Glacial Reach" },
+    { id: 'F', cx: 144, cy: 276, rx: 84, ry: 90, name: "Verdant Elderwood" },
+    { id: 'P', cx: 405, cy: 255, rx: 114, ry: 96, name: "Imperial Crownland" },
+    { id: 'S', cx: 144, cy: 456, rx: 84, ry: 78, name: "The Shadowmire" },
+    { id: 'D', cx: 456, cy: 456, rx: 102, ry: 84, name: "Scorched Sands" },
+    { id: '#', cx: 300, cy: 495, rx: 60, ry: 54, name: "Mount Caldera" },
+    { id: 'Ω', cx: 294, cy: 276, rx: 33, ry: 33, name: "Sacred Isle" }
 ];
 
 // Audio State

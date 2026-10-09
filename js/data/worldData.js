@@ -1,12 +1,12 @@
 // World Data: Continents, Cities, Lore, Handcrafted NPCs, Quests, Enemies, and Bosses
 
 export const CITIES = [
-    { name: "Oakhaven", x: 48, y: 92, biome: 'F', region: "Sylva (The Elderwood)", desc: "Enchanted arboreal haven built around the roots of the Great Elder Tree." },
-    { name: "Mirage Edge", x: 152, y: 152, biome: 'D', region: "Solaris (The Scorched Sands)", desc: "A sandstone oasis citadel overlooking the shifting dunes and buried sun-temples." },
-    { name: "Frosthold", x: 55, y: 38, biome: 'T', region: "Borealis (The Glacial Reach)", desc: "A granite and ice bastion standing defiant against the howling arctic blizzards." },
-    { name: "Bogwatch", x: 48, y: 152, biome: 'S', region: "Venomfang (The Shadowmire)", desc: "A stilt-built settlement shrouded in mystical mist and dark alchemical lore." },
-    { name: "Kingsfall", x: 135, y: 85, biome: 'P', region: "Aethelgard (Imperial Crownlands)", desc: "The ancient seat of the Solar Concordat, surrounded by rolling golden meadows." },
-    { name: "Embergard", x: 100, y: 165, biome: '#', region: "The Ashen Reach (Mount Caldera)", desc: "A subterranean forge-stronghold carved directly into the basalt of Mount Caldera." }
+    { name: "Oakhaven", x: 144, y: 276, biome: 'F', region: "Sylva (The Elderwood)", desc: "Enchanted arboreal haven built around the roots of the Great Elder Tree." },
+    { name: "Mirage Edge", x: 456, y: 456, biome: 'D', region: "Solaris (The Scorched Sands)", desc: "A sandstone oasis citadel overlooking the shifting dunes and buried sun-temples." },
+    { name: "Frosthold", x: 165, y: 114, biome: 'T', region: "Borealis (The Glacial Reach)", desc: "A granite and ice bastion standing defiant against the howling arctic blizzards." },
+    { name: "Bogwatch", x: 144, y: 456, biome: 'S', region: "Venomfang (The Shadowmire)", desc: "A stilt-built settlement shrouded in mystical mist and dark alchemical lore." },
+    { name: "Kingsfall", x: 405, y: 255, biome: 'P', region: "Aethelgard (Imperial Crownlands)", desc: "The ancient seat of the Solar Concordat, surrounded by rolling golden meadows." },
+    { name: "Embergard", x: 300, y: 495, biome: '#', region: "The Ashen Reach (Mount Caldera)", desc: "A subterranean forge-stronghold carved directly into the basalt of Mount Caldera." }
 ];
 
 export const WORLD_LORE = {

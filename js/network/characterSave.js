@@ -4,6 +4,7 @@ import { gameState, TRANSIENT_STATE } from "../core/state.js";
 import { APP_ID, SAVE_VERSION } from "../data/constants.js";
 import { calculateStats } from "../core/inventory.js";
 import { getGlobalWorldTimeMinutes } from "../core/time.js";
+import { CITIES } from "../data/worldData.js";
 
 let saveTimer = null;
 
@@ -149,9 +150,26 @@ export function activateCharacter(characterData) {
     player.symbol = player.symbol || '@';
     player.party = player.party || [];
 
-    // Ensure world coordinates are always initialized
-    if (player.worldX === undefined) player.worldX = player.x || 30;
-    if (player.worldY === undefined) player.worldY = player.y || 30;
+    // Ensure world coordinates are always initialized and scaled to 600x600 world
+    if (player.worldX === undefined) player.worldX = player.x || 405;
+    if (player.worldY === undefined) player.worldY = player.y || 255;
+
+    // Auto-migrate legacy 200x200 characters to new 600x600 world
+    if ((player.worldX < 200 || player.worldY < 200) && (!player.saveVersion || player.saveVersion < 3)) {
+        if (player.boundCity !== undefined && CITIES[player.boundCity]) {
+            player.worldX = CITIES[player.boundCity].x;
+            player.worldY = CITIES[player.boundCity].y;
+            player.x = player.worldX;
+            player.y = player.worldY;
+        } else {
+            player.worldX = Math.min(590, Math.max(10, Math.round(player.worldX * 3)));
+            player.worldY = Math.min(590, Math.max(10, Math.round(player.worldY * 3)));
+            player.x = player.worldX;
+            player.y = player.worldY;
+        }
+        player.exploredMap = null; // Re-initialize exploration bitset for 600x600
+        player.saveVersion = 3;
+    }
 
     // Synchronize to realm server world clock
     player.time = getGlobalWorldTimeMinutes();

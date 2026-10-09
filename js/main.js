@@ -2,7 +2,7 @@
 import { gameState, createDefaultPlayer } from "./core/state.js";
 import { initAuthListener } from "./network/auth.js";
 import { loadUserCharacters, activateCharacter, triggerAutoSave, flushSave } from "./network/characterSave.js";
-import { initMultiplayer, broadcastPresence, sendChatMessage, listOnlinePlayers } from "./network/multiplayer.js";
+import { initMultiplayer, cleanupMultiplayer, broadcastPresence, sendChatMessage, listOnlinePlayers } from "./network/multiplayer.js";
 import { generateWorld, enterLocalZone, enterFloor, generateBuildingInterior, generateArena, spawnQuota, spawnWorldBoss } from "./core/worldGen.js";
 import { renderMap, updateStatus } from "./ui/renderer.js";
 import { toggleTorch, updateTimeUI, startTimeLoop, getGlobalWorldTimeMinutes, formatTime, isWorldNight } from "./core/time.js";
@@ -1028,8 +1028,10 @@ window.addEventListener('DOMContentLoaded', () => {
     initAuthListener(async (user) => {
         updateAccountBadge();
         if (!user) {
+            cleanupMultiplayer();
             showAuthModal();
         } else {
+            initMultiplayer();
             const characters = await loadUserCharacters(user.uid);
             showCharSelectModal(characters);
         }

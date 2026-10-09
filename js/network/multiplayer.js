@@ -23,17 +23,24 @@ export function initMultiplayer() {
     initPresenceListener();
     initChatListener();
 
-    // Heartbeat every 8 seconds to announce online status
+    // Heartbeat every 4 seconds to announce online status
+    if (presenceHeartbeatInterval) clearInterval(presenceHeartbeatInterval);
     presenceHeartbeatInterval = setInterval(() => {
         if (gameState.player && gameState.player.name && gameState.currentUser) {
             broadcastPresence();
         }
-    }, 8000);
+    }, 4000);
 }
 
 export function cleanupMultiplayer() {
-    if (presenceUnsubscribe) presenceUnsubscribe();
-    if (chatUnsubscribe) chatUnsubscribe();
+    if (presenceUnsubscribe) {
+        presenceUnsubscribe();
+        presenceUnsubscribe = null;
+    }
+    if (chatUnsubscribe) {
+        chatUnsubscribe();
+        chatUnsubscribe = null;
+    }
     if (presenceHeartbeatInterval) clearInterval(presenceHeartbeatInterval);
     if (worldClockInterval) clearInterval(worldClockInterval);
     
@@ -41,7 +48,7 @@ export function cleanupMultiplayer() {
     if (!isOfflineMode && db && gameState.currentUser) {
         try {
             const presDoc = doc(db, 'artifacts', APP_ID, 'presence', gameState.currentUser.uid);
-            deleteDoc(presDoc);
+            deleteDoc(presDoc).catch(() => {});
         } catch (e) {}
     }
 }
@@ -51,9 +58,9 @@ export async function broadcastPresence() {
     const player = gameState.player;
     if (!user || !player || !player.name) return;
 
-    // Throttle to at most once every 1.5 seconds to conserve Firebase free tier writes
+    // Throttle to at most once every 600ms for smooth real-time movement
     const now = Date.now();
-    if (now - lastBroadcastTime < 1500) return;
+    if (now - lastBroadcastTime < 600) return;
     lastBroadcastTime = now;
 
     if (isOfflineMode || !db) return;
@@ -79,45 +86,56 @@ export async function broadcastPresence() {
     }
 }
 
-function initPresenceListener() {
+export function initPresenceListener() {
     if (isOfflineMode || !db) return;
+
+    if (presenceUnsubscribe) {
+        presenceUnsubscribe();
+        presenceUnsubscribe = null;
+    }
 
     try {
         const presenceCol = collection(db, 'artifacts', APP_ID, 'presence');
         presenceUnsubscribe = onSnapshot(presenceCol, (snapshot) => {
             const now = Date.now();
             const currentUid = gameState.currentUser?.uid;
+            const activeUids = new Set();
             
-            snapshot.docChanges().forEach((change) => {
-                const data = change.doc.data();
-                if (data.uid === currentUid) return; // Don't track self as other
+            snapshot.docs.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (!data || !data.uid || data.uid === currentUid) return;
 
-                // Ignore stale entries (> 30 seconds since last heartbeat)
-                if (now - (data.lastActive || 0) > 30000) {
-                    gameState.onlinePlayers.delete(data.uid);
+                // Ignore stale entries (> 60 seconds since last heartbeat)
+                if (data.lastActive && (now - data.lastActive > 60000)) {
                     return;
                 }
 
-                if (change.type === 'removed') {
-                    if (gameState.onlinePlayers.has(data.uid)) {
-                        logMessage(`[World]: Adventurer ${data.name} has departed from the realm.`, "system");
-                        gameState.onlinePlayers.delete(data.uid);
-                    }
-                } else {
-                    const isNew = !gameState.onlinePlayers.has(data.uid);
-                    gameState.onlinePlayers.set(data.uid, data);
-                    if (isNew && data.name) {
-                        logMessage(`[World]: Adventurer ${data.name} (Lvl ${data.level || 1}) has arrived in the realm.`, "system");
-                    }
+                activeUids.add(data.uid);
+                const isNew = !gameState.onlinePlayers.has(data.uid);
+                gameState.onlinePlayers.set(data.uid, data);
+                if (isNew && data.name) {
+                    logMessage(`[World]: Adventurer ${data.name} (Lvl ${data.level || 1}) has arrived in the realm.`, "system");
                 }
             });
+
+            // Prune players that departed or became inactive
+            for (const [uid, player] of gameState.onlinePlayers.entries()) {
+                if (!activeUids.has(uid) && !uid.startsWith('sim_')) {
+                    logMessage(`[World]: Adventurer ${player.name} has departed from the realm.`, "system");
+                    gameState.onlinePlayers.delete(uid);
+                }
+            }
 
             // Re-render map to reflect other player positions
             renderMap();
             updateOnlinePlayersCount();
         }, (err) => {
             console.warn("Presence listener notice:", err?.message || err);
-            startSimulatedWanderers();
+            if (err?.code === 'permission-denied') {
+                setTimeout(() => {
+                    if (gameState.currentUser) initPresenceListener();
+                }, 3000);
+            }
         });
     } catch (e) {
         console.warn("Could not start presence listener:", e);
@@ -202,10 +220,13 @@ export function listOnlinePlayers() {
     logMessage(`Total Players Online: ${count}`, "text-cyan-400 font-bold");
 }
 
-function updateOnlinePlayersCount() {
+export function updateOnlinePlayersCount() {
     const countEl = document.getElementById('ui-online-count');
     if (countEl) {
         countEl.innerText = `${gameState.onlinePlayers.size + 1} Online`;
+    }
+    if (window.updateNearbyPlayersHUD) {
+        window.updateNearbyPlayersHUD();
     }
 }
 

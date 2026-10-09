@@ -102,13 +102,13 @@ export function buildWorld() {
 
     // 6 Continental Landmasses + Central Sacred Isle
     const CONTINENTS = [
-        { id: 'T', cx: 55, cy: 38, rx: 36, ry: 24, name: "Borealis" },
-        { id: 'F', cx: 48, cy: 92, rx: 28, ry: 30, name: "Sylva" },
-        { id: 'P', cx: 135, cy: 85, rx: 38, ry: 32, name: "Crownlands" },
-        { id: 'S', cx: 48, cy: 152, rx: 28, ry: 26, name: "Venomfang" },
-        { id: 'D', cx: 152, cy: 152, rx: 34, ry: 28, name: "Solaris" },
-        { id: '#', cx: 100, cy: 165, rx: 20, ry: 18, name: "Ashen Reach" },
-        { id: 'Ω', cx: 98, cy: 92, rx: 11, ry: 11, name: "Sacred Isle" }
+        { id: 'T', cx: 165, cy: 114, rx: 108, ry: 72, name: "Borealis" },
+        { id: 'F', cx: 144, cy: 276, rx: 84, ry: 90, name: "Sylva" },
+        { id: 'P', cx: 405, cy: 255, rx: 114, ry: 96, name: "Crownlands" },
+        { id: 'S', cx: 144, cy: 456, rx: 84, ry: 78, name: "Venomfang" },
+        { id: 'D', cx: 456, cy: 456, rx: 102, ry: 84, name: "Solaris" },
+        { id: '#', cx: 300, cy: 495, rx: 60, ry: 54, name: "Ashen Reach" },
+        { id: 'Ω', cx: 294, cy: 276, rx: 33, ry: 33, name: "Sacred Isle" }
     ];
 
     // Generate base continental terrain matrix
@@ -137,14 +137,14 @@ export function buildWorld() {
             });
 
             // Multi-frequency fractal noise for coastlines, bays, and natural shorelines
-            let n1 = noise.fractal(x * 0.045, y * 0.045, 3, 0.5, 2.0);
-            let n2 = noise.fractal(x * 0.09 + 50, y * 0.09 + 50, 2, 0.5, 2.0);
+            let n1 = noise.fractal(x * 0.015, y * 0.015, 3, 0.5, 2.0);
+            let n2 = noise.fractal(x * 0.03 + 50, y * 0.03 + 50, 2, 0.5, 2.0);
             let elevation = (maxInfluence * 1.3) + (n1 * 0.52) + (n2 * 0.18) - 0.28;
 
             // Smooth coastal falloff at outer perimeter
             let edgeDist = Math.min(x, WORLD_SIZE - 1 - x, y, WORLD_SIZE - 1 - y);
-            if (edgeDist < 12) {
-                elevation *= (edgeDist / 12);
+            if (edgeDist < 25) {
+                elevation *= (edgeDist / 25);
             }
 
             // Elevation classification
@@ -215,7 +215,7 @@ export function buildWorld() {
     }
 
     // Inter-Continental Stone Bridges & Causeways ('=')
-    function carveBridge(x1, y1, x2, y2, width = 2) {
+    function carveBridge(x1, y1, x2, y2, width = 3) {
         let dx = x2 - x1;
         let dy = y2 - y1;
         let steps = Math.max(Math.abs(dx), Math.abs(dy));
@@ -234,29 +234,29 @@ export function buildWorld() {
         }
     }
 
-    // Colossus Bridges connecting Sacred Isle (98, 92) across to each continent
-    carveBridge(98, 92, 135, 85, 2); // 1. High King's Bridge: Sacred Isle to Kingsfall
-    carveBridge(98, 92, 48, 92, 2);  // 2. Elderwood Viaduct: Sacred Isle to Oakhaven
-    carveBridge(98, 92, 55, 38, 2);  // 3. Northern Glacial Span: Sacred Isle to Frosthold
-    carveBridge(98, 92, 152, 152, 2); // 4. Golden Sun Bridge: Sacred Isle to Mirage Edge
-    carveBridge(98, 92, 48, 152, 2); // 5. Mire Causeway: Sacred Isle to Bogwatch
-    carveBridge(98, 92, 100, 165, 2); // 6. Dragon's Viaduct: Sacred Isle to Embergard
+    // Colossus Bridges connecting Sacred Isle (294, 276) across to each continent
+    carveBridge(294, 276, 405, 255, 3); // 1. High King's Bridge: Sacred Isle to Kingsfall
+    carveBridge(294, 276, 144, 276, 3); // 2. Elderwood Viaduct: Sacred Isle to Oakhaven
+    carveBridge(294, 276, 165, 114, 3); // 3. Northern Glacial Span: Sacred Isle to Frosthold
+    carveBridge(294, 276, 456, 456, 3); // 4. Golden Sun Bridge: Sacred Isle to Mirage Edge
+    carveBridge(294, 276, 144, 456, 3); // 5. Mire Causeway: Sacred Isle to Bogwatch
+    carveBridge(294, 276, 300, 495, 3); // 6. Dragon's Viaduct: Sacred Isle to Embergard
 
-    // Place The Grand Shrine of the Ascendant on the Sacred Isle at (98, 92)
-    gameState.worldMap[92][98] = 'Ω';
-    gameState.worldMap[92][97] = '=';
-    gameState.worldMap[92][99] = '=';
-    gameState.worldMap[91][98] = '=';
-    gameState.worldMap[93][98] = '=';
+    // Place The Grand Shrine of the Ascendant on the Sacred Isle at (294, 276)
+    gameState.worldMap[276][294] = 'Ω';
+    gameState.worldMap[276][293] = '=';
+    gameState.worldMap[276][295] = '=';
+    gameState.worldMap[275][294] = '=';
+    gameState.worldMap[277][294] = '=';
 
     // Regional Ancient Shrines
     const REGIONAL_SHRINES = [
-        { x: 52, y: 28 }, // Borealis Glacier Shrine
-        { x: 38, y: 80 }, // Elderwood Nature Shrine
-        { x: 145, y: 75 }, // Crownlands Sun Shrine
-        { x: 165, y: 160 }, // Solaris Desert Shrine
-        { x: 38, y: 160 }, // Venomfang Mire Shrine
-        { x: 105, y: 172 }  // Caldera Core Shrine
+        { x: 156, y: 84 },  // Borealis Glacier Shrine
+        { x: 114, y: 240 }, // Elderwood Nature Shrine
+        { x: 435, y: 225 }, // Crownlands Sun Shrine
+        { x: 495, y: 480 }, // Solaris Desert Shrine
+        { x: 114, y: 480 }, // Venomfang Mire Shrine
+        { x: 315, y: 516 }  // Caldera Core Shrine
     ];
     REGIONAL_SHRINES.forEach(s => {
         if (gameState.worldMap[s.y] && gameState.worldMap[s.y][s.x]) {
@@ -266,13 +266,13 @@ export function buildWorld() {
 
     // Astral Leyline Waygates ('Փ')
     const ASTRAL_GATES = [
-        { x: 133, y: 83 }, // Crownlands Solar Spire
-        { x: 46, y: 90 },  // Elderwood Root-Nexus
-        { x: 53, y: 36 },  // Borealis Rime-Gate
-        { x: 150, y: 150 },// Solaris Sun-Altar
-        { x: 46, y: 150 }, // Venomfang Mire-Veil
-        { x: 98, y: 163 }, // Caldera Ash-Rift
-        { x: 96, y: 92 }   // Sacred Isle Core Nexus
+        { x: 403, y: 253 }, // Crownlands Solar Spire
+        { x: 142, y: 274 }, // Elderwood Root-Nexus
+        { x: 163, y: 112 }, // Borealis Rime-Gate
+        { x: 454, y: 454 }, // Solaris Sun-Altar
+        { x: 142, y: 454 }, // Venomfang Mire-Veil
+        { x: 298, y: 493 }, // Caldera Ash-Rift
+        { x: 290, y: 276 }  // Sacred Isle Core Nexus
     ];
     ASTRAL_GATES.forEach(g => {
         if (gameState.worldMap[g.y] && gameState.worldMap[g.y][g.x]) {
@@ -282,13 +282,13 @@ export function buildWorld() {
 
     // Coastal Harbor Docks ('⚓')
     const HARBOR_DOCKS = [
-        { x: 138, y: 88 }, // Port of Kingsfall
-        { x: 52, y: 95 },  // Oakhaven Docks
-        { x: 58, y: 42 },  // Frosthold Ice-Pier
-        { x: 155, y: 155 },// Mirage Edge Duneport
-        { x: 52, y: 155 }, // Bogwatch Mist Wharf
-        { x: 104, y: 168 },// Embergard Basalt Harbor
-        { x: 101, y: 94 }  // Sacred Isle Anchorage
+        { x: 408, y: 258 }, // Port of Kingsfall
+        { x: 148, y: 280 }, // Oakhaven Docks
+        { x: 168, y: 118 }, // Frosthold Ice-Pier
+        { x: 460, y: 460 }, // Mirage Edge Duneport
+        { x: 148, y: 460 }, // Bogwatch Mist Wharf
+        { x: 305, y: 500 }, // Embergard Basalt Harbor
+        { x: 298, y: 280 }  // Sacred Isle Anchorage
     ];
     HARBOR_DOCKS.forEach(d => {
         if (gameState.worldMap[d.y] && gameState.worldMap[d.y][d.x]) {
@@ -299,8 +299,8 @@ export function buildWorld() {
     // Clear safe land around cities and spawn city POIs
     CITIES.forEach((city, index) => {
         // Guarantee solid walkable terrain around the city gate
-        for (let dy = -3; dy <= 5; dy++) {
-            for (let dx = -3; dx <= 5; dx++) {
+        for (let dy = -4; dy <= 6; dy++) {
+            for (let dx = -4; dx <= 6; dx++) {
                 let cy = city.y + dy;
                 let cx = city.x + dx;
                 if (cy >= 0 && cy < WORLD_SIZE && cx >= 0 && cx < WORLD_SIZE) {
@@ -318,12 +318,12 @@ export function buildWorld() {
         generateNPCsForCity(city.x, city.y); 
     });
 
-    // Spawn dungeons, caves, and fortresses across the continents
+    // Spawn dungeons, caves, and fortresses across the continents (10x landmass)
     const biomes = ['F', 'D', 'T', 'S', 'P', '#'];
     biomes.forEach(b => {
-        spawnQuota(b, 'D', 1, 2, 2); 
-        spawnQuota(b, '^', Math.floor(Math.random() * 2) + 1, 3, 3); 
-        spawnQuota(b, '*', Math.floor(Math.random() * 2) + 2, 2, 2); 
+        spawnQuota(b, 'D', 6, 2, 2); 
+        spawnQuota(b, '^', Math.floor(Math.random() * 3) + 6, 3, 3); 
+        spawnQuota(b, '*', Math.floor(Math.random() * 3) + 8, 2, 2); 
     });
     
     spawnWorldBoss(); 
@@ -917,12 +917,12 @@ export function spawnWorldBoss(forceRespawn = false) {
     }
 
     const BOSS_DOMAINS = [
-        { biome: 'P', anchorX: 163, anchorY: 85, name: 'Void Warlord of the Crownlands', region: 'Crownlands', hp: 650, dmg: 28 },
-        { biome: 'F', anchorX: 35, anchorY: 116, name: 'Blighted Treant Patriarch', region: 'Sylva', hp: 600, dmg: 26 },
-        { biome: 'T', anchorX: 82, anchorY: 33, name: 'Ancient Frost Wyrm, Rimefang', region: 'Borealis', hp: 750, dmg: 32 },
-        { biome: 'S', anchorX: 34, anchorY: 170, name: 'Swamp Hag Matriarch, Morwena', region: 'Venomfang', hp: 580, dmg: 25 },
-        { biome: 'D', anchorX: 178, anchorY: 162, name: 'Obsidian Sand Colossus', region: 'Solaris', hp: 700, dmg: 30 },
-        { biome: '#', anchorX: 85, anchorY: 171, name: 'Magma Behemoth, Ignis', region: 'Ashen Reach', hp: 720, dmg: 31 }
+        { biome: 'P', anchorX: 489, anchorY: 255, name: 'Void Warlord of the Crownlands', region: 'Crownlands', hp: 650, dmg: 28 },
+        { biome: 'F', anchorX: 105, anchorY: 348, name: 'Blighted Treant Patriarch', region: 'Sylva', hp: 600, dmg: 26 },
+        { biome: 'T', anchorX: 246, anchorY: 99, name: 'Ancient Frost Wyrm, Rimefang', region: 'Borealis', hp: 750, dmg: 32 },
+        { biome: 'S', anchorX: 102, anchorY: 510, name: 'Swamp Hag Matriarch, Morwena', region: 'Venomfang', hp: 580, dmg: 25 },
+        { biome: 'D', anchorX: 534, anchorY: 486, name: 'Obsidian Sand Colossus', region: 'Solaris', hp: 700, dmg: 30 },
+        { biome: '#', anchorX: 255, anchorY: 513, name: 'Magma Behemoth, Ignis', region: 'Ashen Reach', hp: 720, dmg: 31 }
     ];
 
     gameState.worldBosses = BOSS_DOMAINS.map(b => {

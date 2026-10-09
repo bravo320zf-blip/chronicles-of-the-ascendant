@@ -9,7 +9,7 @@ import { generateWorld, enterLocalZone } from "../core/worldGen.js";
 import { renderMap } from "./renderer.js";
 import { logMessage } from "./log.js";
 import { calculateStats } from "../core/inventory.js";
-import { broadcastPresence } from "../network/multiplayer.js";
+import { broadcastPresence, cleanupMultiplayer } from "../network/multiplayer.js";
 import { initExploration } from "./worldMap.js";
 import { getClass } from "../data/classes.js";
 import { updateGatherUI } from "../core/gathering.js";
@@ -215,6 +215,7 @@ export function updateAccountBadge() {
 
     document.getElementById('btn-logout')?.addEventListener('click', async () => {
         await flushSave();
+        cleanupMultiplayer();
         await signOutUser();
         showAuthModal();
     });

@@ -1,8 +1,8 @@
 // Core Game Constants
-export const WORLD_SIZE = 200;
-export const VIEW_RADIUS = 15;
+export const WORLD_SIZE = 600;
+export const VIEW_RADIUS = 16;
 export const LOCAL_SIZE = 40;
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 // Shared World Constants for MMORPG Synchronization
 // All players connecting to the standard realm share this deterministic seed

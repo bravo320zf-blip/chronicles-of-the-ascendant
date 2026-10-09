@@ -81,9 +81,9 @@ export function renderMap() {
 
             if (otherPlayer) {
                 const isPartied = (player.party && (player.party.includes(otherPlayer.uid) || player.party.includes(otherPlayer.name)));
-                const pColorClass = isPartied ? "map-party-player text-white font-bold" : "map-online-player text-green-400 font-bold";
+                const pColorClass = isPartied ? "map-party-player text-white font-bold" : "map-online-player text-green-300 font-bold";
                 const pChar = otherPlayer.symbol || '@';
-                asciiHTML += `<span class="map-tile ${pColorClass} cursor-pointer" title="${otherPlayer.name}">${pChar}</span>`;
+                asciiHTML += `<span class="map-tile ${pColorClass} cursor-pointer" title="${otherPlayer.name} (Lvl ${otherPlayer.level || 1} ${otherPlayer.loadout || 'Adventurer'})" onclick="if(window.openPlayerInteraction) window.openPlayerInteraction('${otherPlayer.uid}')">${pChar}</span>`;
                 continue;
             }
 
@@ -259,4 +259,61 @@ export function renderMap() {
     if (biomeEl) biomeEl.innerText = biomeName;
     
     updateStatus();
+    updateNearbyPlayersHUD();
+}
+
+export function updateNearbyPlayersHUD() {
+    const el = document.getElementById('ui-nearby-players-text');
+    if (!el) return;
+
+    const player = gameState.player;
+    if (!player) return;
+
+    if (!gameState.onlinePlayers || gameState.onlinePlayers.size === 0) {
+        el.innerHTML = `<span class="text-gray-500 font-mono">No other adventurers in range.</span>`;
+        return;
+    }
+
+    const inWorld = player.zone === 'world';
+    let nearbyInfo = [];
+
+    for (const [uid, op] of gameState.onlinePlayers.entries()) {
+        const pChar = op.symbol || '@';
+        if (op.zone === player.zone) {
+            const px = inWorld ? player.worldX : player.localX;
+            const py = inWorld ? player.worldY : player.localY;
+            const opX = inWorld ? op.worldX : op.localX;
+            const opY = inWorld ? op.worldY : op.localY;
+            const dx = opX - px;
+            const dy = opY - py;
+            const dist = Math.round(Math.hypot(dx, dy));
+
+            let dir = "";
+            if (dy < 0) dir += "N";
+            if (dy > 0) dir += "S";
+            if (dx < 0) dir += "W";
+            if (dx > 0) dir += "E";
+            if (!dir) dir = "Here";
+
+            nearbyInfo.push(`
+                <span class="cursor-pointer hover:underline text-green-300 font-bold" onclick="if(window.openPlayerInteraction) window.openPlayerInteraction('${op.uid}')" title="Click to interact with ${op.name}">
+                    [${pChar}] ${op.name} (Lvl ${op.level || 1}) <span class="text-yellow-400 font-mono">${dist}t ${dir}</span>
+                </span>
+            `);
+        } else {
+            // In another zone
+            let zoneDesc = op.zone === 'world' ? 'Overworld' : (op.zone.includes('_') ? 'Citadel' : 'Dungeon');
+            nearbyInfo.push(`
+                <span class="text-gray-400">
+                    [${pChar}] ${op.name} (Lvl ${op.level || 1}) <span class="text-cyan-400">in ${zoneDesc}</span>
+                </span>
+            `);
+        }
+    }
+
+    el.innerHTML = nearbyInfo.slice(0, 3).join(' | ');
+}
+
+if (typeof window !== 'undefined') {
+    window.updateNearbyPlayersHUD = updateNearbyPlayersHUD;
 }

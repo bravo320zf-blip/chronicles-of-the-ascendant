@@ -20,8 +20,8 @@ export const CONTINENTAL_PORTS = [
         cityName: "Kingsfall",
         continent: "Crownlands",
         biome: 'P',
-        worldX: 135,
-        worldY: 85,
+        worldX: 405,
+        worldY: 255,
         cityIdx: 4,
         shipName: "The Sun Sovereign",
         captain: "Captain Valen Drake",
@@ -34,8 +34,8 @@ export const CONTINENTAL_PORTS = [
         cityName: "Oakhaven",
         continent: "Sylva (Elderwood)",
         biome: 'F',
-        worldX: 48,
-        worldY: 92,
+        worldX: 144,
+        worldY: 276,
         cityIdx: 0,
         shipName: "The Verdant Skiff",
         captain: "River Captain Marlo",
@@ -48,8 +48,8 @@ export const CONTINENTAL_PORTS = [
         cityName: "Frosthold",
         continent: "Borealis (Glacial Reach)",
         biome: 'T',
-        worldX: 55,
-        worldY: 38,
+        worldX: 165,
+        worldY: 114,
         cityIdx: 2,
         shipName: "The Glacier Cutter",
         captain: "Captain Sigurd Iron-Helm",
@@ -62,8 +62,8 @@ export const CONTINENTAL_PORTS = [
         cityName: "Mirage Edge",
         continent: "Solaris (Scorched Sands)",
         biome: 'D',
-        worldX: 152,
-        worldY: 152,
+        worldX: 456,
+        worldY: 456,
         cityIdx: 1,
         shipName: "The Golden Dune-Barge",
         captain: "Navigator Zahra Al-Din",
@@ -76,8 +76,8 @@ export const CONTINENTAL_PORTS = [
         cityName: "Bogwatch",
         continent: "Venomfang (Shadowmire)",
         biome: 'S',
-        worldX: 48,
-        worldY: 152,
+        worldX: 144,
+        worldY: 456,
         cityIdx: 3,
         shipName: "The Mist Strider",
         captain: "Ferryman Kaelen",
@@ -90,8 +90,8 @@ export const CONTINENTAL_PORTS = [
         cityName: "Embergard",
         continent: "Ashen Reach (Mount Caldera)",
         biome: '#',
-        worldX: 100,
-        worldY: 165,
+        worldX: 300,
+        worldY: 495,
         cityIdx: 5,
         shipName: "The Obsidian Ironclad",
         captain: "Captain Vulcan Stone-Keel",
@@ -104,8 +104,8 @@ export const CONTINENTAL_PORTS = [
         cityName: "Sacred Isle",
         continent: "The Sanctuary (Sacred Isle)",
         biome: 'Ω',
-        worldX: 98,
-        worldY: 92,
+        worldX: 294,
+        worldY: 276,
         cityIdx: -1,
         shipName: "The Starfarer Pilgrim",
         captain: "Celestial Pilot Zephyr",
@@ -124,8 +124,8 @@ export const ASTRAL_WAYGATES = [
         continent: "Crownlands",
         region: "Aethelgard (Imperial Realm)",
         biome: 'P',
-        worldX: 133,
-        worldY: 83,
+        worldX: 403,
+        worldY: 253,
         rune: "☼ Solar Keystone",
         element: "Divine Radiance",
         color: "#f59e0b",
@@ -137,8 +137,8 @@ export const ASTRAL_WAYGATES = [
         continent: "Sylva",
         region: "The Elderwood",
         biome: 'F',
-        worldX: 46,
-        worldY: 90,
+        worldX: 142,
+        worldY: 274,
         rune: "♣ Verdant Keystone",
         element: "Verdant Nature",
         color: "#22c55e",
@@ -150,8 +150,8 @@ export const ASTRAL_WAYGATES = [
         continent: "Borealis",
         region: "The Glacial Reach",
         biome: 'T',
-        worldX: 53,
-        worldY: 36,
+        worldX: 163,
+        worldY: 112,
         rune: "❄ Frost Keystone",
         element: "Arctic Frost",
         color: "#38bdf8",
@@ -163,8 +163,8 @@ export const ASTRAL_WAYGATES = [
         continent: "Solaris",
         region: "The Scorched Sands",
         biome: 'D',
-        worldX: 150,
-        worldY: 150,
+        worldX: 454,
+        worldY: 454,
         rune: "🔥 Flame Keystone",
         element: "Solar Flame",
         color: "#f97316",
@@ -176,8 +176,8 @@ export const ASTRAL_WAYGATES = [
         continent: "Venomfang",
         region: "The Shadowmire",
         biome: 'S',
-        worldX: 46,
-        worldY: 150,
+        worldX: 142,
+        worldY: 454,
         rune: "≈ Tide Keystone",
         element: "Shadow & Mists",
         color: "#a855f7",
@@ -189,8 +189,8 @@ export const ASTRAL_WAYGATES = [
         continent: "Ashen Reach",
         region: "Mount Caldera",
         biome: '#',
-        worldX: 98,
-        worldY: 163,
+        worldX: 298,
+        worldY: 493,
         rune: "⛰ Magma Keystone",
         element: "Earth & Molten Magma",
         color: "#ef4444",
@@ -202,8 +202,8 @@ export const ASTRAL_WAYGATES = [
         continent: "Sacred Isle",
         region: "Sanctuary of the Ascendants",
         biome: 'Ω',
-        worldX: 98,
-        worldY: 92,
+        worldX: 294,
+        worldY: 276,
         rune: "✦ Astral Core",
         element: "Cosmic Aether",
         color: "#e879f9",
@@ -216,8 +216,8 @@ export function getCurrentPort() {
     let player = gameState.player;
     if (!player) return CONTINENTAL_PORTS[0];
 
-    let px = player.worldX ?? player.x ?? 135;
-    let py = player.worldY ?? player.y ?? 85;
+    let px = player.worldX ?? player.x ?? 405;
+    let py = player.worldY ?? player.y ?? 255;
 
     // Check if player is in a city local map
     if (player.zone && player.zone !== 'world') {
@@ -247,8 +247,8 @@ export function getCurrentWaygate() {
     let player = gameState.player;
     if (!player) return ASTRAL_WAYGATES[0];
 
-    let px = player.worldX ?? player.x ?? 133;
-    let py = player.worldY ?? player.y ?? 83;
+    let px = player.worldX ?? player.x ?? 403;
+    let py = player.worldY ?? player.y ?? 253;
 
     let closest = ASTRAL_WAYGATES[0];
     let minDist = Infinity;

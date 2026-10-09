@@ -75,6 +75,11 @@ class ExplorationBitset {
     deserialize(base64Str) {
         try {
             const binary = atob(base64Str);
+            if (binary.length !== BYTE_COUNT) {
+                // Outdated world size format (e.g. from 200x200 world), reset for 600x600 world
+                this.bytes.fill(0);
+                return;
+            }
             const len = Math.min(binary.length, BYTE_COUNT);
             for (let i = 0; i < len; i++) {
                 this.bytes[i] = binary.charCodeAt(i);
@@ -93,9 +98,9 @@ export function initExploration(player) {
     
     // Automatically reveal starter area if newly loaded or empty
     if (activeExploration.countExplored() === 0) {
-        const sx = (player.worldX !== undefined && player.worldX !== null) ? player.worldX : (player.x || 135);
-        const sy = (player.worldY !== undefined && player.worldY !== null) ? player.worldY : (player.y || 85);
-        activeExploration.revealCircle(sx, sy, 14);
+        const sx = (player.worldX !== undefined && player.worldX !== null) ? player.worldX : (player.x || 405);
+        const sy = (player.worldY !== undefined && player.worldY !== null) ? player.worldY : (player.y || 255);
+        activeExploration.revealCircle(sx, sy, 25);
         player.exploredMap = activeExploration.serialize();
     }
 }
@@ -178,7 +183,7 @@ export function renderWorldMapModal() {
     const stats = getExplorationStats();
     const badgeEl = document.getElementById('wm-explored-badge');
     if (badgeEl) {
-        badgeEl.innerText = `${stats.percent} Explored (${stats.explored.toLocaleString()} / 40,000 tiles)`;
+        badgeEl.innerText = `${stats.percent} Explored (${stats.explored.toLocaleString()} / 360,000 tiles)`;
     }
 
     const heroCoordsEl = document.getElementById('wm-hero-coords');
@@ -190,8 +195,8 @@ export function renderWorldMapModal() {
         heroCoordsEl.innerText = `(${player.worldX}, ${player.worldY}) — ${reg}`;
     }
 
-    // 200x200 tiles rendered at 3x scale (600x600 pixels)
-    const scale = 3;
+    // 600x600 tiles rendered at 1:1 scale (600x600 canvas)
+    const scale = 1;
     const imgData = ctx.createImageData(600, 600);
     const data = imgData.data;
 
@@ -201,8 +206,8 @@ export function renderWorldMapModal() {
             let r, g, b;
 
             if (!isExplored) {
-                // Subtle fog grid markings every 25 tiles
-                if (x % 25 === 0 || y % 25 === 0) {
+                // Subtle fog grid markings every 50 tiles
+                if (x % 50 === 0 || y % 50 === 0) {
                     r = 14; g = 18; b = 15;
                 } else {
                     r = FOG_COLOR[0]; g = FOG_COLOR[1]; b = FOG_COLOR[2];
@@ -213,17 +218,11 @@ export function renderWorldMapModal() {
                 r = col[0]; g = col[1]; b = col[2];
             }
 
-            // Fill 3x3 pixel block
-            for (let py = 0; py < scale; py++) {
-                const rowOffset = ((y * scale + py) * 600 + (x * scale)) * 4;
-                for (let px = 0; px < scale; px++) {
-                    const idx = rowOffset + (px * 4);
-                    data[idx] = r;
-                    data[idx + 1] = g;
-                    data[idx + 2] = b;
-                    data[idx + 3] = 255;
-                }
-            }
+            const idx = (y * 600 + x) * 4;
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
         }
     }
 
@@ -237,8 +236,8 @@ export function renderWorldMapModal() {
     // Discovered Cities
     for (const [id, city] of Object.entries(CITIES)) {
         if (activeExploration.isExplored(city.x, city.y)) {
-            const cx = city.x * scale + 1.5;
-            const cy = city.y * scale + 1.5;
+            const cx = city.x * scale;
+            const cy = city.y * scale;
 
             // Golden Citadel Marker
             ctx.fillStyle = '#fbbf24';
@@ -259,10 +258,10 @@ export function renderWorldMapModal() {
         }
     }
 
-    // Ancient Shrine of the Ascendant (98, 92)
-    if (activeExploration.isExplored(98, 92)) {
-        const sx = 98 * scale + 1.5;
-        const sy = 92 * scale + 1.5;
+    // Ancient Shrine of the Ascendant (294, 276)
+    if (activeExploration.isExplored(294, 276)) {
+        const sx = 294 * scale;
+        const sy = 276 * scale;
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
         ctx.arc(sx, sy, 4, 0, Math.PI * 2);
@@ -308,8 +307,8 @@ export function renderWorldMapModal() {
     // ==========================================
     CONTINENTAL_PORTS.forEach(port => {
         if (activeExploration.isExplored(port.worldX, port.worldY)) {
-            const px = port.worldX * scale + 1.5;
-            const py = port.worldY * scale + 1.5;
+            const px = port.worldX * scale;
+            const py = port.worldY * scale;
 
             // Cyan Anchor Dot
             ctx.fillStyle = '#38bdf8';
@@ -336,8 +335,8 @@ export function renderWorldMapModal() {
     // ==========================================
     ASTRAL_WAYGATES.forEach(gate => {
         if (activeExploration.isExplored(gate.worldX, gate.worldY)) {
-            const gx = gate.worldX * scale + 1.5;
-            const gy = gate.worldY * scale + 1.5;
+            const gx = gate.worldX * scale;
+            const gy = gate.worldY * scale;
 
             // Violet Diamond / Pulsing Node
             ctx.fillStyle = gate.color || '#c084fc';
@@ -362,8 +361,8 @@ export function renderWorldMapModal() {
     // ==========================================
     // HERO LOCATION BEACON
     // ==========================================
-    const hx = player.worldX * scale + 1.5;
-    const hy = player.worldY * scale + 1.5;
+    const hx = player.worldX * scale;
+    const hy = player.worldY * scale;
 
     // Glowing Crosshair
     ctx.strokeStyle = 'rgba(74, 222, 128, 0.4)';
@@ -402,8 +401,8 @@ export function initWorldMapEvents() {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-            const tx = Math.floor(mouseX / 3);
-            const ty = Math.floor(mouseY / 3);
+            const tx = Math.floor(mouseX);
+            const ty = Math.floor(mouseY);
 
             if (tx < 0 || tx >= WORLD_SIZE || ty < 0 || ty >= WORLD_SIZE) return;
 
@@ -415,14 +414,14 @@ export function initWorldMapEvents() {
                 const reg = regions[biome] || 'The Great Rift Ocean';
 
                 let landmark = "";
-                const city = Object.values(CITIES).find(c => Math.abs(c.x - tx) <= 2 && Math.abs(c.y - ty) <= 2);
+                const city = Object.values(CITIES).find(c => Math.abs(c.x - tx) <= 5 && Math.abs(c.y - ty) <= 5);
                 if (city) landmark += ` ★ City of ${city.name}`;
-                if (tx === 98 && ty === 92) landmark += ` ✦ Ancient Shrine of the Ascendant`;
+                if (Math.abs(tx - 294) <= 4 && Math.abs(ty - 276) <= 4) landmark += ` ✦ Ancient Shrine of the Ascendant`;
 
-                const nearPort = CONTINENTAL_PORTS.find(p => Math.abs(p.worldX - tx) <= 2 && Math.abs(p.worldY - ty) <= 2);
+                const nearPort = CONTINENTAL_PORTS.find(p => Math.abs(p.worldX - tx) <= 5 && Math.abs(p.worldY - ty) <= 5);
                 if (nearPort) landmark += ` ⚓ ${nearPort.name}`;
 
-                const nearGate = ASTRAL_WAYGATES.find(g => Math.abs(g.worldX - tx) <= 2 && Math.abs(g.worldY - ty) <= 2);
+                const nearGate = ASTRAL_WAYGATES.find(g => Math.abs(g.worldX - tx) <= 5 && Math.abs(g.worldY - ty) <= 5);
                 if (nearGate) landmark += ` Փ ${nearGate.name}`;
 
                 hoverInfo.innerHTML = `<span class="text-green-400 font-bold">${tObj.name}</span> in <span class="text-cyan-400 font-bold">${reg}</span> — Coords: <span class="text-yellow-400 font-mono">(${tx}, ${ty})</span>${landmark ? ` <span class="text-purple-300 font-bold">${landmark}</span>` : ''}`;
@@ -439,8 +438,8 @@ export function initWorldMapEvents() {
     if (recenterBtn && wrapper && canvas) {
         recenterBtn.addEventListener('click', () => {
             const player = gameState.player;
-            const hx = player.worldX * 3;
-            const hy = player.worldY * 3;
+            const hx = player.worldX;
+            const hy = player.worldY;
             wrapper.scrollTo({
                 left: hx - wrapper.clientWidth / 2,
                 top: hy - wrapper.clientHeight / 2,
