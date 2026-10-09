@@ -100,6 +100,16 @@ export const CITY_NPCS_DATA = {
                 isComplete: false,
                 isTurnedIn: false
             }
+        },
+        {
+            name: "Captain Valen Drake",
+            profession: "Imperial Harbor Master",
+            isCaptain: true,
+            quirk: "weather-beaten and authoritative",
+            dialogue: "Welcome to the Port of Kingsfall. The Sun Sovereign is rigged and ready. Where does your destiny call you across the seas?",
+            backstory: "I've commanded imperial warships for thirty years across every ocean of Aethelgard. The Great Inland Sea is treacherous, but no wave can best my flagship.",
+            lore: "Before the Void Tear shattered the leylines, our fleet patrolled all six continents. Even now, our ferries provide safe passage between the great cities.",
+            rumor: "If you sail south to Mirage Edge, prepare for blistering heat. If you head north to Frosthold, pack thick furs."
         }
     ],
 
@@ -154,6 +164,16 @@ export const CITY_NPCS_DATA = {
                 isComplete: false,
                 isTurnedIn: false
             }
+        },
+        {
+            name: "River Captain Marlo",
+            profession: "Ferry Captain",
+            isCaptain: true,
+            quirk: "calm and forest-wise",
+            dialogue: "The whispering currents of Sylva guide our skiffs safely to open water. Care to charter passage across the sea?",
+            backstory: "My family has steered river barges through the Elderwood for three generations. The trees guide our navigation.",
+            lore: "The waterways connect directly from Oakhaven's roots through the estuaries into the Great Sea. We can sail to any continental harbor.",
+            rumor: "The waters near the Sacred Isle glow with celestial light at midnight. The fish there are like living gems."
         }
     ],
 
@@ -208,6 +228,16 @@ export const CITY_NPCS_DATA = {
                 isComplete: false,
                 isTurnedIn: false
             }
+        },
+        {
+            name: "Navigator Zahra Al-Din",
+            profession: "Sun-Barge Captain",
+            isCaptain: true,
+            quirk: "sharp-eyed and adventurous",
+            dialogue: "The winds off the dunes are favorable today. The Golden Mirage can carry you to any distant continent across the waves.",
+            backstory: "I navigate by the twin stars of the Southern Constellation. Desert sand or deep ocean swells—it's all waves to a true nomad.",
+            lore: "Solaris trades spices, rare silks, and solar crystal prisms across the waterways. Our barge is the fastest vessel afloat.",
+            rumor: "The waters south of here boil near Mount Caldera. We steer a wide berth around the volcanic shoals."
         }
     ],
 
@@ -262,6 +292,16 @@ export const CITY_NPCS_DATA = {
                 isComplete: false,
                 isTurnedIn: false
             }
+        },
+        {
+            name: "Captain Sigurd Iron-Helm",
+            profession: "Icebreaker Captain",
+            isCaptain: true,
+            quirk: "bearded, hearty, and loud",
+            dialogue: "Ha! The Glacier Cutter's iron hull can crack through thirty paces of solid blue ice! Looking to leave the cold behind, warrior?",
+            backstory: "I took my first icebreaker through the frozen straits when the ice was thick enough to crush a whale. Nothing stops my ship.",
+            lore: "Borealis was once linked by trade ships year-round. When the frost wyrms stirred, only our reinforced cutters could make the run.",
+            rumor: "Watch out for rogue icebergs drifting south toward Kingsfall. They carry frozen wraiths on their crags."
         }
     ],
 
@@ -294,7 +334,8 @@ export const CITY_NPCS_DATA = {
         },
         {
             name: "Ferryman Silas",
-            profession: "Bayou Navigator",
+            profession: "Bayou Ferrymaster",
+            isCaptain: true,
             quirk: "grim and silent",
             dialogue: "The fog conceals many things in the Shadowmire... some better left undiscovered.",
             backstory: "I've rowed these waterways for forty years. I know every sunken root and every submerged skeleton. The crocodiles have grown unnaturally vicious since the dark fog rolled in.",
@@ -370,6 +411,16 @@ export const CITY_NPCS_DATA = {
                 isComplete: false,
                 isTurnedIn: false
             }
+        },
+        {
+            name: "Captain Vulcan Stone-Keel",
+            profession: "Basalt Harbor Master",
+            isCaptain: true,
+            quirk: "stout, soot-streaked, and resolute",
+            dialogue: "The Obsidian Ironclad can withstand boiling sulfur and molten waves alike! Need passage off the volcanic isle, traveler?",
+            backstory: "Built of solid forge-tempered basalt and steel plate. The lava currents of Mount Caldera don't even singe our paint.",
+            lore: "Our harbor connects the subterranean forge of Mount Caldera with the outer kingdoms. We supply weapons and receive grain.",
+            rumor: "The leylines beneath the mountain are so intense that the compass spins in circles. We steer by the glow of the crater."
         }
     ]
 };

@@ -247,6 +247,7 @@
             <button class="btn-term text-sm" onclick="toggleModal('passive-modal')">Passive Tree [P]</button>
             <button class="btn-term text-sm" onclick="toggleModal('journal-modal')">Journal [J]</button>
             <button class="btn-term text-sm border-emerald-700 text-emerald-400 hover:bg-emerald-900/30 font-bold" onclick="toggleWorldMap()">World Map [M]</button>
+            <button class="btn-term text-sm border-amber-700 text-amber-400 hover:bg-amber-900/30 font-bold" onclick="openVoyageModal()">Travel [V]</button>
             <button class="btn-term text-sm text-yellow-400 border-yellow-900 hover:bg-yellow-900/30" onclick="executeAction('rest')">Rest</button>
         </div>
     </div>
@@ -593,11 +594,81 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block border border-green-500"></span> Hero</span>
                     <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block border border-amber-800"></span> City</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block border border-cyan-800"></span> Harbor (⚓)</span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block border border-purple-800"></span> Waygate (Փ)</span>
                     <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> Ancient Shrine</span>
                     <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-pink-500 inline-block"></span> World Boss</span>
                     <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-zinc-900 inline-block border border-zinc-700"></span> Unexplored Fog</span>
                 </div>
                 <div class="text-gray-500 font-mono">Press [M] or [ESC] to return to the realm</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MARITIME PORT AUTHORITY & VOYAGE CHARTER MODAL -->
+    <!-- ============================================== -->
+    <div id="voyage-modal" class="hidden-ui absolute inset-0 z-40 bg-black/95 flex items-center justify-center p-3 md:p-6">
+        <div class="panel w-full max-w-4xl max-h-[90vh] flex flex-col p-4 md:p-6 bg-black/95 border-2 border-amber-900 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+            <!-- Header -->
+            <div class="flex justify-between items-center border-b border-amber-900/80 pb-2 mb-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-xl md:text-2xl font-bold text-amber-400 tracking-wider flex items-center gap-2">
+                        <span>⚓</span> PORT AUTHORITY & VOYAGE CHARTER
+                    </h2>
+                    <span class="bg-amber-950/80 border border-amber-800 text-amber-300 text-xs px-2 py-0.5 rounded font-mono">Ocean Ferries</span>
+                </div>
+                <button class="text-red-500 hover:text-red-400 font-bold text-lg px-2" onclick="closeVoyageModal()">[X]</button>
+            </div>
+
+            <div class="text-xs text-gray-400 mb-3 flex flex-wrap justify-between items-center bg-zinc-950/80 p-2 border border-amber-950 rounded">
+                <div>Board galleons and ferry skiffs to cross the Great Inland Sea between continents.</div>
+                <button class="text-purple-400 hover:text-purple-300 font-bold underline text-xs" onclick="closeVoyageModal(); openWaygateModal();">
+                    ✦ Switch to Astral Waygate Nexus
+                </button>
+            </div>
+
+            <!-- Dynamic Content -->
+            <div id="voyage-content" class="flex-1 overflow-hidden flex flex-col"></div>
+
+            <!-- Footer -->
+            <div class="border-t border-amber-950/80 pt-2 mt-3 flex justify-between items-center text-[11px] text-gray-500 font-mono">
+                <div>Harbor Captains offer passage to any discovered port across Aethelgard.</div>
+                <div>Press [V] or [ESC] to close</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- ASTRAL LEYLINE TELEPORTATION NEXUS MODAL       -->
+    <!-- ============================================== -->
+    <div id="waygate-modal" class="hidden-ui absolute inset-0 z-40 bg-black/95 flex items-center justify-center p-3 md:p-6">
+        <div class="panel w-full max-w-4xl max-h-[90vh] flex flex-col p-4 md:p-6 bg-black/95 border-2 border-purple-900 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+            <!-- Header -->
+            <div class="flex justify-between items-center border-b border-purple-900/80 pb-2 mb-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-xl md:text-2xl font-bold text-purple-300 tracking-wider flex items-center gap-2">
+                        <span class="text-pink-400">Փ</span> ASTRAL LEYLINE WAYGATE NEXUS
+                    </h2>
+                    <span class="bg-purple-950/80 border border-purple-800 text-purple-300 text-xs px-2 py-0.5 rounded font-mono">Planar Teleporters</span>
+                </div>
+                <button class="text-red-500 hover:text-red-400 font-bold text-lg px-2" onclick="closeWaygateModal()">[X]</button>
+            </div>
+
+            <div class="text-xs text-gray-400 mb-3 flex flex-wrap justify-between items-center bg-zinc-950/80 p-2 border border-purple-950 rounded">
+                <div>Channel the celestial leylines of the Cosmic Ascendants to instantly warp across planetary sanctuarues.</div>
+                <button class="text-amber-400 hover:text-amber-300 font-bold underline text-xs" onclick="closeWaygateModal(); openVoyageModal();">
+                    ⚓ Switch to Maritime Port Ferries
+                </button>
+            </div>
+
+            <!-- Dynamic Content -->
+            <div id="waygate-content" class="flex-1 overflow-hidden flex flex-col"></div>
+
+            <!-- Footer -->
+            <div class="border-t border-purple-950/80 pt-2 mt-3 flex justify-between items-center text-[11px] text-gray-500 font-mono">
+                <div>Planar leylines transcend ocean depths and mountain barriers.</div>
+                <div>Type /teleport or press [ESC] to close</div>
             </div>
         </div>
     </div>

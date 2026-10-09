@@ -28,6 +28,8 @@ export const TERRAIN = {
     'T': { name: 'Deadwood / Blight', color: '#71717a', char: 'T' },
     'd': { name: 'Deadwood', color: '#71717a', char: 'T' },
     'Ω': { name: 'Ancient Shrine of the Ascendant', color: '#fbbf24', char: 'Ω' },
+    '⚓': { name: 'Harbor Pier / Port Docks', color: '#38bdf8', char: '⚓' },
+    'Փ': { name: 'Astral Leyline Waygate', color: '#c084fc', char: 'Փ' },
 
     // Legacy Biome Characters (Fallback)
     'F': { name: 'Forest', color: '#16a34a', char: '♣' },
@@ -83,5 +85,7 @@ export const LOCAL_TILES = {
     '&': { name: 'Barrel', color: '#8b4513', char: '8' },
     'p': { name: 'Poison Pool', color: '#00ff00', char: '≈' },
     'v': { name: 'Lava', color: '#ff4500', char: '≈' },
+    '⚓': { name: 'Harbor Docks / Ferry Pier', color: '#38bdf8', char: '⚓' },
+    'Փ': { name: 'Astral Leyline Teleporter', color: '#c084fc', char: 'Փ' },
     ' ': { name: 'Void', color: '#000000', char: ' ' }
 };

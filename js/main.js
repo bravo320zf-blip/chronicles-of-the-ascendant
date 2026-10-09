@@ -22,12 +22,19 @@ import { passiveRank } from "./core/state.js";
 import { getClass } from "./data/classes.js";
 import { getRemainingGathers, getMaxDailyGathers, useGatherEnergy, updateGatherUI } from "./core/gathering.js";
 import { playSFX, updateMusicForCurrentState, initAudioUserUnlock, toggleAudioMute, setAudioVolume, updateAudioUI } from "./core/audio.js";
+import { openVoyageModal, closeVoyageModal, embarkVoyage, openWaygateModal, closeWaygateModal, teleportViaWaygate } from "./core/travel.js";
 
 // ==========================================
 // EXPOSE CORE FUNCTIONS TO GLOBAL WINDOW API
 // (Ensures seamless HTML onclick compatibility)
 // ==========================================
 window.gameState = gameState;
+window.openVoyageModal = openVoyageModal;
+window.closeVoyageModal = closeVoyageModal;
+window.embarkVoyage = embarkVoyage;
+window.openWaygateModal = openWaygateModal;
+window.closeWaygateModal = closeWaygateModal;
+window.teleportViaWaygate = teleportViaWaygate;
 window.toggleAudioMute = toggleAudioMute;
 window.setAudioVolume = setAudioVolume;
 window.playSFX = playSFX;
@@ -170,6 +177,24 @@ window.movePlayer = function(dx, dy) {
             return;
         }
 
+        if (tile === '⚓') {
+            logMessage("*** You have reached a Coastal Harbor Dock! ***", "text-cyan-400 font-bold");
+            logMessage("Boarding vessels allows sea travel to any continental port across the Great Sea.", "text-yellow-300 text-xs");
+            openVoyageModal();
+            moveWorldEntities();
+            renderMap();
+            return;
+        }
+
+        if (tile === 'Փ') {
+            logMessage("*** You step upon an Astral Leyline Waygate! ***", "text-purple-400 font-bold blink");
+            logMessage("The celestial runes hum with planar energy connecting the 7 planetary sanctuaries.", "text-cyan-300 text-xs");
+            openWaygateModal();
+            moveWorldEntities();
+            renderMap();
+            return;
+        }
+
         if (tile === 'P' && gameState.pois[`${nx},${ny}`]) {
             let poi = gameState.pois[`${nx},${ny}`];
             
@@ -308,6 +333,20 @@ window.movePlayer = function(dx, dy) {
             updateMusicForCurrentState();
             renderMap(); 
             broadcastPresence();
+            return;
+        }
+        if (tile === '⚓') {
+            registerAction();
+            logMessage("*** You step onto the Harbor Ferry Pier! ***", "text-cyan-400 font-bold");
+            openVoyageModal();
+            renderMap();
+            return;
+        }
+        if (tile === 'Փ') {
+            registerAction();
+            logMessage("*** You activate the Town Astral Waygate! ***", "text-purple-400 font-bold blink");
+            openWaygateModal();
+            renderMap();
             return;
         }
         if (tile === '+' || tile === 'e' || tile === 'B' || tile === 'N' || tile === 'M' || tile === 'C') {
@@ -657,13 +696,19 @@ function initCommandInput() {
                 updateMusicForCurrentState();
                 logMessage("Background music refreshed for current area.", "system");
             }
+            else if (['/travel', 'travel', '/ferry', 'ferry', '/boat', 'boat', '/sail', 'sail', '/voyage', 'voyage'].includes(cmd.toLowerCase())) {
+                openVoyageModal();
+            }
+            else if (['/teleport', 'teleport', '/portal', 'portal', '/waygate', 'waygate'].includes(cmd.toLowerCase())) {
+                openWaygateModal();
+            }
             else if (cmd === '/help' || cmd === 'help') {
                 logMessage("=== MUD COMMAND GUIDE ===", "system");
                 logMessage("Movement: [Arrow Keys] or 'n', 's', 'e', 'w'");
                 logMessage("Combat: [A] Attack, [Q]/[E] Cast Spells, /flee (run away)");
                 logMessage("Chat: '/say <msg>' (local) | '/shout <msg>' (global) | '/who' (online players)");
-                logMessage("Shortcuts: [M] World Map, [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
-                logMessage("Commands: /map, /look, /gather, /energy, /rest, /torch, /time, /attack, /flee, /descend, /mute, /volume <0-100>, /respawn");
+                logMessage("Shortcuts: [M] World Map, [V] Travel / Ferry, [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
+                logMessage("Commands: /map, /travel (ferry), /teleport (waygate), /look, /gather, /energy, /rest, /torch, /time, /attack, /flee, /descend, /mute, /volume <0-100>, /respawn");
             }
             else if (cmd === '/respawn') {
                 let player = gameState.player;
@@ -779,8 +824,9 @@ function initKeyboardControls() {
             case 'q': if(player.hotkeys && player.hotkeys.q) useActiveSkill(player.hotkeys.q); break;
             case 'e': if(player.hotkeys && player.hotkeys.e) useActiveSkill(player.hotkeys.e); break;
             case 'm': toggleWorldMap(); break;
+            case 'v': openVoyageModal(); break;
             case 'escape':
-                ['stats-modal', 'inventory-modal', 'skills-modal', 'crafting-modal', 'passive-modal', 'journal-modal', 'stash-modal', 'settings-modal', 'player-interact-modal', 'trade-modal', 'worldmap-modal'].forEach(m => {
+                ['stats-modal', 'inventory-modal', 'skills-modal', 'crafting-modal', 'passive-modal', 'journal-modal', 'stash-modal', 'settings-modal', 'player-interact-modal', 'trade-modal', 'worldmap-modal', 'voyage-modal', 'waygate-modal'].forEach(m => {
                     document.getElementById(m)?.classList.add('hidden-ui');
                 });
                 break;

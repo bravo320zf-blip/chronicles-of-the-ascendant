@@ -3,6 +3,7 @@ import { gameState } from "../core/state.js";
 import { WORLD_SIZE } from "../data/constants.js";
 import { TERRAIN } from "../data/terrain.js";
 import { CITIES, getTileBiome } from "../data/worldData.js";
+import { CONTINENTAL_PORTS, ASTRAL_WAYGATES } from "../core/travel.js";
 
 // 200x200 tiles = 40,000 bits = 5,000 bytes
 const TOTAL_BITS = WORLD_SIZE * WORLD_SIZE;
@@ -303,6 +304,62 @@ export function renderWorldMapModal() {
     });
 
     // ==========================================
+    // OVERLAY: CONTINENTAL PORTS & DOCKS (⚓)
+    // ==========================================
+    CONTINENTAL_PORTS.forEach(port => {
+        if (activeExploration.isExplored(port.worldX, port.worldY)) {
+            const px = port.worldX * scale + 1.5;
+            const py = port.worldY * scale + 1.5;
+
+            // Cyan Anchor Dot
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(px, py, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Port Label
+            const shortName = port.name.replace('Port of ', '').replace(' Docks', '');
+            ctx.font = 'bold 8px monospace';
+            ctx.fillStyle = '#bae6fd';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeText(`⚓ ${shortName}`, px + 6, py + 2);
+            ctx.fillText(`⚓ ${shortName}`, px + 6, py + 2);
+        }
+    });
+
+    // ==========================================
+    // OVERLAY: ASTRAL LEYLINE WAYGATES (Փ)
+    // ==========================================
+    ASTRAL_WAYGATES.forEach(gate => {
+        if (activeExploration.isExplored(gate.worldX, gate.worldY)) {
+            const gx = gate.worldX * scale + 1.5;
+            const gy = gate.worldY * scale + 1.5;
+
+            // Violet Diamond / Pulsing Node
+            ctx.fillStyle = gate.color || '#c084fc';
+            ctx.beginPath();
+            ctx.arc(gx, gy, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#581c87';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Waygate Label
+            const shortGate = gate.name.replace(' Waygate', '').replace(' Portal', '');
+            ctx.font = 'bold 8px monospace';
+            ctx.fillStyle = '#f3e8ff';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeText(`Փ ${shortGate}`, gx + 6, gy + 2);
+            ctx.fillText(`Փ ${shortGate}`, gx + 6, gy + 2);
+        }
+    });
+
+    // ==========================================
     // HERO LOCATION BEACON
     // ==========================================
     const hx = player.worldX * scale + 1.5;
@@ -359,8 +416,14 @@ export function initWorldMapEvents() {
 
                 let landmark = "";
                 const city = Object.values(CITIES).find(c => Math.abs(c.x - tx) <= 2 && Math.abs(c.y - ty) <= 2);
-                if (city) landmark = ` ★ City of ${city.name}`;
-                if (tx === 98 && ty === 92) landmark = ` ✦ Ancient Shrine of the Ascendant`;
+                if (city) landmark += ` ★ City of ${city.name}`;
+                if (tx === 98 && ty === 92) landmark += ` ✦ Ancient Shrine of the Ascendant`;
+
+                const nearPort = CONTINENTAL_PORTS.find(p => Math.abs(p.worldX - tx) <= 2 && Math.abs(p.worldY - ty) <= 2);
+                if (nearPort) landmark += ` ⚓ ${nearPort.name}`;
+
+                const nearGate = ASTRAL_WAYGATES.find(g => Math.abs(g.worldX - tx) <= 2 && Math.abs(g.worldY - ty) <= 2);
+                if (nearGate) landmark += ` Փ ${nearGate.name}`;
 
                 hoverInfo.innerHTML = `<span class="text-green-400 font-bold">${tObj.name}</span> in <span class="text-cyan-400 font-bold">${reg}</span> — Coords: <span class="text-yellow-400 font-mono">(${tx}, ${ty})</span>${landmark ? ` <span class="text-purple-300 font-bold">${landmark}</span>` : ''}`;
             } else {

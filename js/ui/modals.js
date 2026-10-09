@@ -23,6 +23,8 @@ export function toggleModal(id) {
         if(id === 'journal-modal') renderJournal();
         if(id === 'crafting-modal') renderCrafting();
         if(id === 'worldmap-modal') renderWorldMapModal();
+        if(id === 'voyage-modal' && window.renderVoyageModal) window.renderVoyageModal();
+        if(id === 'waygate-modal' && window.renderWaygateModal) window.renderWaygateModal();
     } else {
         if (id === 'inventory-modal') closeInventory();
         else modal.classList.add('hidden-ui');

@@ -297,7 +297,12 @@ export function showDialogueOptions() {
         state.options.push({ key: 'sell', label: `"I want to sell items."`, color: 'text-yellow-400 hover:text-white' });
     }
 
-    // 6. Exit
+    // 6. Captain / Ferry Options
+    if (npc.isCaptain || (npc.profession && (npc.profession.includes('Captain') || npc.profession.includes('Ferrymaster') || npc.profession.includes('Harbor Master')))) {
+        state.options.push({ key: 'ferry_travel', label: `"I want to book passage to another continent (Voyage Charter)."`, color: 'text-cyan-400 font-bold hover:text-white' });
+    }
+
+    // 7. Exit
     state.options.push({ key: 'exit', label: `"Goodbye."`, color: 'text-gray-400 hover:text-white' });
 
     // Render numbered options
@@ -379,6 +384,10 @@ export function handleDialogue(choice) {
             if (window.toggleModal) window.toggleModal('inventory-modal'); 
             const titleEl = document.getElementById('backpack-title');
             if (titleEl) titleEl.innerText = "Select Items to Sell";
+        }
+        else if (key === 'ferry_travel') {
+            player.activeDialogue = null;
+            if (window.openVoyageModal) window.openVoyageModal(npc);
         }
         else if (key === 'exit') { 
             player.activeDialogue = null; 

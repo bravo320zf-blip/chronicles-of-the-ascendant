@@ -157,10 +157,10 @@ export function buildWorld() {
             } else if (elevation < 0.20) {
                 // Coastal Beaches & Sand
                 row.push('.');
-            } else if (elevation > 0.84) {
+            } else if (elevation > 0.96) {
                 // High Mountain Peaks (Impassable)
                 row.push('▲');
-            } else if (elevation > 0.72) {
+            } else if (elevation > 0.82) {
                 // Foothills & Mountain Passes (Passable)
                 row.push('^');
             } else {
@@ -234,18 +234,13 @@ export function buildWorld() {
         }
     }
 
-    // 1. High King's Bridge: Kingsfall mainland across strait to Sacred Isle
-    carveBridge(108, 92, 122, 92, 2);
-    // 2. Elderwood Viaduct: Sylva across strait to Sacred Isle
-    carveBridge(74, 92, 88, 92, 2);
-    // 3. Northern Glacial Span: Crownlands north across sea to Borealis
-    carveBridge(95, 48, 95, 62, 2);
-    // 4. Golden Sun Bridge: Crownlands south across sea to Solaris
-    carveBridge(136, 116, 136, 128, 2);
-    // 5. Mire Causeway: Sylva south across estuary into Venomfang
-    carveBridge(48, 120, 48, 132, 2);
-    // 6. Dragon's Viaduct: Mainland south to Mount Caldera / Embergard
-    carveBridge(100, 144, 100, 156, 2);
+    // Colossus Bridges connecting Sacred Isle (98, 92) across to each continent
+    carveBridge(98, 92, 135, 85, 2); // 1. High King's Bridge: Sacred Isle to Kingsfall
+    carveBridge(98, 92, 48, 92, 2);  // 2. Elderwood Viaduct: Sacred Isle to Oakhaven
+    carveBridge(98, 92, 55, 38, 2);  // 3. Northern Glacial Span: Sacred Isle to Frosthold
+    carveBridge(98, 92, 152, 152, 2); // 4. Golden Sun Bridge: Sacred Isle to Mirage Edge
+    carveBridge(98, 92, 48, 152, 2); // 5. Mire Causeway: Sacred Isle to Bogwatch
+    carveBridge(98, 92, 100, 165, 2); // 6. Dragon's Viaduct: Sacred Isle to Embergard
 
     // Place The Grand Shrine of the Ascendant on the Sacred Isle at (98, 92)
     gameState.worldMap[92][98] = 'Ω';
@@ -269,11 +264,43 @@ export function buildWorld() {
         }
     });
 
+    // Astral Leyline Waygates ('Փ')
+    const ASTRAL_GATES = [
+        { x: 133, y: 83 }, // Crownlands Solar Spire
+        { x: 46, y: 90 },  // Elderwood Root-Nexus
+        { x: 53, y: 36 },  // Borealis Rime-Gate
+        { x: 150, y: 150 },// Solaris Sun-Altar
+        { x: 46, y: 150 }, // Venomfang Mire-Veil
+        { x: 98, y: 163 }, // Caldera Ash-Rift
+        { x: 96, y: 92 }   // Sacred Isle Core Nexus
+    ];
+    ASTRAL_GATES.forEach(g => {
+        if (gameState.worldMap[g.y] && gameState.worldMap[g.y][g.x]) {
+            gameState.worldMap[g.y][g.x] = 'Փ';
+        }
+    });
+
+    // Coastal Harbor Docks ('⚓')
+    const HARBOR_DOCKS = [
+        { x: 138, y: 88 }, // Port of Kingsfall
+        { x: 52, y: 95 },  // Oakhaven Docks
+        { x: 58, y: 42 },  // Frosthold Ice-Pier
+        { x: 155, y: 155 },// Mirage Edge Duneport
+        { x: 52, y: 155 }, // Bogwatch Mist Wharf
+        { x: 104, y: 168 },// Embergard Basalt Harbor
+        { x: 101, y: 94 }  // Sacred Isle Anchorage
+    ];
+    HARBOR_DOCKS.forEach(d => {
+        if (gameState.worldMap[d.y] && gameState.worldMap[d.y][d.x]) {
+            gameState.worldMap[d.y][d.x] = '⚓';
+        }
+    });
+
     // Clear safe land around cities and spawn city POIs
     CITIES.forEach((city, index) => {
         // Guarantee solid walkable terrain around the city gate
-        for (let dy = -2; dy <= 4; dy++) {
-            for (let dx = -2; dx <= 4; dx++) {
+        for (let dy = -3; dy <= 5; dy++) {
+            for (let dx = -3; dx <= 5; dx++) {
                 let cy = city.y + dy;
                 let cx = city.x + dx;
                 if (cy >= 0 && cy < WORLD_SIZE && cx >= 0 && cx < WORLD_SIZE) {
@@ -476,6 +503,11 @@ export function generateCity(poiKey, poi) {
     map[22][18] = 's'; map[22][19] = 's';
     map[18][21] = 't'; map[17][21] = 'l';
     
+    // City Travel Hub: Astral Waygate and Harbor Pier
+    map[18][20] = 'Փ'; // Town Square Astral Teleporter
+    map[3][20] = '⚓';  // North Harbor Pier / Ferry Dock
+    map[3][19] = '=';  map[3][21] = '='; // Pier wooden decking
+    
     let doors = {
         '10,16': { type: 'Alchemy', returnX: 10, returnY: 17 },
         '28,16': { type: 'Weapon', returnX: 28, returnY: 17 },
@@ -485,6 +517,11 @@ export function generateCity(poiKey, poi) {
     
     let cityNPCs = gameState.npcs[`${poi.rootX},${poi.rootY}`] || [];
     cityNPCs.forEach((npc) => {
+        if (npc.isCaptain) {
+            map[4][20] = 'N';
+            entities['20,4'] = { type: 'npc', data: npc };
+            return;
+        }
         let spot = findEmptySpot(map, ',');
         if(spot) {
             map[spot.y][spot.x] = 'N';

@@ -135,7 +135,7 @@ export function renderMap() {
                         }
                     } else {
                         let tObj = TERRAIN[tile] || { color: '#fff', char: ' ' };
-                        let extraClass = tile === 'Ω' ? 'map-shrine' : (tile === '=' ? 'map-bridge' : '');
+                        let extraClass = tile === 'Ω' ? 'map-shrine' : (tile === '=' ? 'map-bridge' : (tile === 'Փ' ? 'text-purple-400 font-bold blink' : (tile === '⚓' ? 'text-cyan-400 font-bold' : '')));
                         asciiHTML += `<span class="map-tile ${extraClass}" style="color: ${tObj.color}" title="${tObj.name}">${tObj.char}</span>`;
                     }
                 } else {
@@ -160,7 +160,15 @@ export function renderMap() {
                     let bgStyle = "";
                     let tileTitle = lObj.name || "";
 
-                    if (tile === '▼') {
+                    if (tile === 'Փ') {
+                        tileColor = '#c084fc';
+                        c = 'text-purple-400 font-bold blink';
+                        tileTitle = 'Astral Leyline Teleporter [Step on to Travel]';
+                    } else if (tile === '⚓') {
+                        tileColor = '#38bdf8';
+                        c = 'text-cyan-400 font-bold';
+                        tileTitle = 'Harbor Docks / Ferry Pier [Step on to Sail]';
+                    } else if (tile === '▼') {
                         let isUnlocked = (player.unlockedFloors && player.unlockedFloors[player.zone]) || gameState.localMaps[player.zone]?.stairUnlocked;
                         if (isUnlocked) {
                             tileColor = '#4ade80';
