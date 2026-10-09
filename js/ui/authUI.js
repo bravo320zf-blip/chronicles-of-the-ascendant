@@ -13,18 +13,21 @@ import { broadcastPresence } from "../network/multiplayer.js";
 import { initExploration } from "./worldMap.js";
 import { getClass } from "../data/classes.js";
 import { updateGatherUI } from "../core/gathering.js";
+import { fadeBGM, updateMusicForCurrentState } from "../core/audio.js";
 
 export function showAuthModal() {
     document.getElementById('auth-modal')?.classList.remove('hidden-ui');
     document.getElementById('char-select-modal')?.classList.add('hidden-ui');
     document.getElementById('char-creation')?.classList.add('hidden-ui');
     document.getElementById('main-game')?.classList.add('hidden-ui');
+    fadeBGM('main_menu');
 }
 
 export function showCharSelectModal(characters) {
     document.getElementById('auth-modal')?.classList.add('hidden-ui');
     document.getElementById('char-creation')?.classList.add('hidden-ui');
     document.getElementById('main-game')?.classList.add('hidden-ui');
+    fadeBGM('main_menu');
     
     const modal = document.getElementById('char-select-modal');
     if (!modal) return;
@@ -38,6 +41,7 @@ export function showCharCreationModal() {
     document.getElementById('char-select-modal')?.classList.add('hidden-ui');
     document.getElementById('main-game')?.classList.add('hidden-ui');
     document.getElementById('char-creation')?.classList.remove('hidden-ui');
+    fadeBGM('main_menu');
 }
 
 export function showMainGame() {
@@ -90,6 +94,7 @@ export function showMainGame() {
     renderMap();
     updateGatherUI();
     updateAccountBadge();
+    updateMusicForCurrentState();
     broadcastPresence();
 }
 

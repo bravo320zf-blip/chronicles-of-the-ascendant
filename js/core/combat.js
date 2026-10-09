@@ -7,6 +7,7 @@ import { logMessage, playEncounterAnimation } from "../ui/log.js";
 import { generateArena, generateNPCsForCity } from "./worldGen.js";
 import { updateTimeUI } from "./time.js";
 import { applyGuardDeathPenalty, moveEntities } from "./entities.js";
+import { playSFX, updateMusicForCurrentState } from "./audio.js";
 
 export function registerAction() {
     let player = gameState.player;
@@ -218,6 +219,7 @@ export function resolveSkillHit(skill, tx, ty, caster, lMap) {
             }
             if (baseDmg > 0) {
                 player.hp -= baseDmg;
+                playSFX('enemy_attack');
                 logMessage(`${casterName}'s ${skill.name} hits you for ${Math.floor(baseDmg)} damage!`, "combat");
                 if (skipEnemyTurn) logMessage("You are stunned/frozen by the impact!", "text-cyan-400");
                 if (player.hp <= 0) { player.hp = 0; logMessage("You have died. Type /respawn", "combat"); }
@@ -276,8 +278,10 @@ export function triggerCombat(tile) {
             });
         } else {
             playEncounterAnimation('ambush', "AMBUSH!", () => {
+                playSFX('ambush');
                 logMessage("*** IT'S AN AMBUSH! YOU ARE TRAPPED! ***", "text-red-500 font-bold blink");
                 generateArena('ambush', { biome: tile });
+                updateMusicForCurrentState();
             });
         }
         return;
@@ -382,6 +386,7 @@ export function handleCombatTurn(skipPlayerAttack = false) {
     
     if (!skipPlayerAttack) {
         registerAction();
+        playSFX('attack');
         let pDmg = Math.max(1, Math.floor(Math.random() * 6) + Math.max(player.calcStats.str, player.calcStats.dex)/2 + player.calcStats.atk);
         
         if (player.passives) {
@@ -642,6 +647,7 @@ export function handleCombatTurn(skipPlayerAttack = false) {
 
                     eDmg = Math.max(0, Math.ceil(eDmg));
                     player.hp -= eDmg;
+                    if (eDmg > 0) playSFX('enemy_attack');
                     logMessage(`The ${e.name} hits you for ${eDmg} damage!`, "combat");
                     
                     if (e.elite === 'Vampiric' && eDmg > 0) {
@@ -767,6 +773,9 @@ export function confirmCast(skill, targets) {
     if (lMap && !lMap.projectiles) lMap.projectiles = [];
 
     logMessage(`You cast <span class="text-cyan-400 font-bold">${skill.name}</span>!`);
+    if (skill.type === 'offensive' || targets.some(t => !t.isPlayer)) {
+        playSFX('attack');
+    }
 
     for (let i = 0; i < repeat; i++) {
         if (skill.speed && skill.speed > 0) {
@@ -861,6 +870,7 @@ export function triggerBossDefeat(e) {
         player.zone = 'world'; 
         player.x = player.worldX || 30;
         player.y = player.worldY || 30;
+        updateMusicForCurrentState();
         if (window.renderMap) window.renderMap();
         return;
     }
@@ -884,5 +894,6 @@ export function triggerBossDefeat(e) {
     player.zone = 'world'; 
     player.x = poi.rootX; 
     player.y = poi.rootY;
+    updateMusicForCurrentState();
     if (window.renderMap) window.renderMap();
 }

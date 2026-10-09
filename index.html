@@ -192,7 +192,10 @@
 
                 <div class="flex justify-between items-center px-1 mb-1 text-[11px] border-b border-green-900/40 pb-1">
                     <span id="ui-account-badge" class="text-gray-400">Connecting...</span>
-                    <span id="ui-online-count" class="text-cyan-400 font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-900">1 Online</span>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-audio-toggle" class="cursor-pointer text-[10px] text-cyan-400 border border-cyan-800 bg-black/60 px-1.5 py-0.5 rounded hover:bg-cyan-900/30 font-bold" onclick="toggleAudioMute()" title="Toggle Sound (Music & SFX)">🔊 Audio: ON</button>
+                        <span id="ui-online-count" class="text-cyan-400 font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-900">1 Online</span>
+                    </div>
                 </div>
                 
                 <!-- ASCII MAP CONTAINER -->

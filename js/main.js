@@ -21,12 +21,17 @@ import { WORLD_SIZE, LOCAL_SIZE } from "./data/constants.js";
 import { passiveRank } from "./core/state.js";
 import { getClass } from "./data/classes.js";
 import { getRemainingGathers, getMaxDailyGathers, useGatherEnergy, updateGatherUI } from "./core/gathering.js";
+import { playSFX, updateMusicForCurrentState, initAudioUserUnlock, toggleAudioMute, setAudioVolume, updateAudioUI } from "./core/audio.js";
 
 // ==========================================
 // EXPOSE CORE FUNCTIONS TO GLOBAL WINDOW API
 // (Ensures seamless HTML onclick compatibility)
 // ==========================================
 window.gameState = gameState;
+window.toggleAudioMute = toggleAudioMute;
+window.setAudioVolume = setAudioVolume;
+window.playSFX = playSFX;
+window.updateMusicForCurrentState = updateMusicForCurrentState;
 window.renderMap = renderMap;
 window.updateStatus = updateStatus;
 window.toggleModal = toggleModal;
@@ -131,6 +136,7 @@ window.movePlayer = function(dx, dy) {
         
         player.x = nx; player.y = ny; player.worldX = nx; player.worldY = ny;
         revealWorldArea(nx, ny, 12);
+        updateMusicForCurrentState();
         let tile = gameState.worldMap[ny][nx];
         
         let skipAction = passiveRank('phase_shift') && Math.random() < (player.passives.phase_shift * 0.1);
@@ -178,6 +184,7 @@ window.movePlayer = function(dx, dy) {
                 logMessage(`*** You enter ${poi.name} ***`, "system");
             }
             enterLocalZone(`${poi.rootX},${poi.rootY}`, poi);
+            updateMusicForCurrentState();
         } else if (Math.random() < 0.10) {
             triggerCombat(tile);
         }
@@ -199,6 +206,7 @@ window.movePlayer = function(dx, dy) {
         if (tile === '<') {
             registerAction();
             if (lMap.type === 'shop') {
+                playSFX('door');
                 let activeGuards = 0;
                 if (lMap.entities) {
                     for (let key in lMap.entities) {
@@ -243,6 +251,7 @@ window.movePlayer = function(dx, dy) {
             player.inCombat = false; 
             player.currentEnemy = null; 
             player.combatTarget = null;
+            updateMusicForCurrentState();
             renderMap(); 
             broadcastPresence();
             return;
@@ -274,12 +283,14 @@ window.movePlayer = function(dx, dy) {
             }
 
             registerAction();
+            playSFX('stairs');
             let lastIdx = player.zone.lastIndexOf('_');
             let p = lastIdx !== -1 ? player.zone.substring(0, lastIdx) : player.zone;
             let z = lastIdx !== -1 ? parseInt(player.zone.substring(lastIdx + 1)) : 0;
             player.zone = `${p}_${z + 1}`;
             logMessage("You descend deeper into the dungeon...", "system");
             enterFloor(player.zone, '▲'); 
+            updateMusicForCurrentState();
             renderMap(); 
             triggerAutoSave();
             broadcastPresence();
@@ -287,12 +298,14 @@ window.movePlayer = function(dx, dy) {
         }
         if (tile === '▲') {
             registerAction();
+            playSFX('stairs');
             let lastIdx = player.zone.lastIndexOf('_');
             let p = lastIdx !== -1 ? player.zone.substring(0, lastIdx) : player.zone;
             let z = lastIdx !== -1 ? parseInt(player.zone.substring(lastIdx + 1)) : 0;
             player.zone = `${p}_${Math.max(0, z - 1)}`;
             logMessage("You climb up...", "system");
             enterFloor(player.zone, '▼'); 
+            updateMusicForCurrentState();
             renderMap(); 
             broadcastPresence();
             return;
@@ -301,6 +314,7 @@ window.movePlayer = function(dx, dy) {
             if (tile === 'C') { toggleModal('stash-modal'); return; }
             
             if (tile === '+') { 
+                playSFX('door');
                 if (lMap.doors && lMap.doors[`${nx},${ny}`]) {
                     let doorObj = lMap.doors[`${nx},${ny}`];
                     let bldType = doorObj.type;
@@ -311,6 +325,7 @@ window.movePlayer = function(dx, dy) {
                     player.zone = bldZone;
                     player.localX = 20; player.localY = 24; 
                     logMessage(`You enter the ${bldType} shop.`, "system");
+                    updateMusicForCurrentState();
                     renderMap(); 
                     triggerAutoSave(); 
                     broadcastPresence();
@@ -624,13 +639,31 @@ function initCommandInput() {
                     logMessage("You cannot descend here.", "text-gray-400");
                 }
             }
+            else if (cmd === '/mute' || cmd === '/unmute') {
+                const muted = toggleAudioMute();
+                logMessage(`Audio is now <span class="font-bold ${muted ? 'text-gray-400' : 'text-cyan-400'}">${muted ? 'MUTED' : 'UNMUTED'}</span>.`, "system");
+            }
+            else if (cmd.startsWith('/volume') || cmd.startsWith('/vol')) {
+                const parts = cmd.trim().split(/\s+/);
+                const val = parseFloat(parts[1]);
+                if (!isNaN(val) && val >= 0 && val <= 100) {
+                    setAudioVolume(val / 100, Math.min(1.0, (val / 100) * 1.2));
+                    logMessage(`Volume set to ${Math.round(val)}%.`, "system");
+                } else {
+                    logMessage(`Usage: /volume &lt;0-100&gt;`, "text-gray-400");
+                }
+            }
+            else if (cmd === '/music' || cmd === '/bgm') {
+                updateMusicForCurrentState();
+                logMessage("Background music refreshed for current area.", "system");
+            }
             else if (cmd === '/help' || cmd === 'help') {
                 logMessage("=== MUD COMMAND GUIDE ===", "system");
                 logMessage("Movement: [Arrow Keys] or 'n', 's', 'e', 'w'");
                 logMessage("Combat: [A] Attack, [Q]/[E] Cast Spells, /flee (run away)");
                 logMessage("Chat: '/say <msg>' (local) | '/shout <msg>' (global) | '/who' (online players)");
                 logMessage("Shortcuts: [M] World Map, [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
-                logMessage("Commands: /map, /look, /gather, /energy, /rest, /torch, /time, /attack, /flee, /descend, /respawn");
+                logMessage("Commands: /map, /look, /gather, /energy, /rest, /torch, /time, /attack, /flee, /descend, /mute, /volume <0-100>, /respawn");
             }
             else if (cmd === '/respawn') {
                 let player = gameState.player;
@@ -932,6 +965,9 @@ function initCharacterCreation() {
 // GAME INITIALIZATION
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
+    initAudioUserUnlock();
+    updateAudioUI();
+    updateMusicForCurrentState();
     initCommandInput();
     initKeyboardControls();
     initAuthUIEvents();
