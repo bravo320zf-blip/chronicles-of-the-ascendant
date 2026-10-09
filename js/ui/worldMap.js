@@ -390,62 +390,244 @@ export function renderWorldMapModal() {
     ctx.fillText(`★ ${player.name || 'Hero'}`, hx + 7, hy - 5);
 }
 
+// ==========================================
+// CAMERA ZOOM & PAN ENGINE
+// ==========================================
+let mapZoom = 1.0;
+let panX = 0;
+let panY = 0;
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStartPanX = 0;
+let dragStartPanY = 0;
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 4.0;
+
+export function applyMapTransform() {
+    const canvas = document.getElementById('worldmap-canvas');
+    if (canvas) {
+        canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${mapZoom})`;
+    }
+    const zoomLabel = document.getElementById('wm-zoom-level');
+    if (zoomLabel) {
+        zoomLabel.innerText = `${Math.round(mapZoom * 100)}%`;
+    }
+}
+
+export function setZoom(newZoom, focalX = null, focalY = null) {
+    const wrapper = document.getElementById('wm-canvas-wrapper');
+    if (!wrapper) return;
+
+    const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+    if (Math.abs(clampedZoom - mapZoom) < 0.001) return;
+
+    const W = wrapper.clientWidth || 700;
+    const H = wrapper.clientHeight || 550;
+    const fx = (focalX !== null && focalX !== undefined) ? focalX : W / 2;
+    const fy = (focalY !== null && focalY !== undefined) ? focalY : H / 2;
+
+    // World tile coordinate under focal point before zoom
+    const wx = (fx - panX) / mapZoom;
+    const wy = (fy - panY) / mapZoom;
+
+    mapZoom = clampedZoom;
+    panX = Math.round(fx - wx * mapZoom);
+    panY = Math.round(fy - wy * mapZoom);
+
+    applyMapTransform();
+}
+
+export function zoomIn() {
+    const canvas = document.getElementById('worldmap-canvas');
+    if (canvas) canvas.style.transition = 'transform 0.08s ease-out';
+    setZoom(mapZoom * 1.25);
+}
+
+export function zoomOut() {
+    const canvas = document.getElementById('worldmap-canvas');
+    if (canvas) canvas.style.transition = 'transform 0.08s ease-out';
+    setZoom(mapZoom / 1.25);
+}
+
+export function centerOnCoords(worldX, worldY) {
+    const wrapper = document.getElementById('wm-canvas-wrapper');
+    if (!wrapper) return;
+    const W = wrapper.clientWidth || 700;
+    const H = wrapper.clientHeight || 550;
+    panX = Math.round(W / 2 - worldX * mapZoom);
+    panY = Math.round(H / 2 - worldY * mapZoom);
+    applyMapTransform();
+}
+
+export function centerOnHero() {
+    const player = gameState.player;
+    if (!player) return;
+    const hx = (player.worldX !== undefined && player.worldX !== null) ? player.worldX : (player.x || 405);
+    const hy = (player.worldY !== undefined && player.worldY !== null) ? player.worldY : (player.y || 255);
+    centerOnCoords(hx, hy);
+}
+
+export function resetZoomAndRecenter() {
+    mapZoom = 1.0;
+    const canvas = document.getElementById('worldmap-canvas');
+    if (canvas) canvas.style.transition = 'transform 0.1s ease-out';
+    centerOnHero();
+}
+
+export function panCamera(dx, dy) {
+    const canvas = document.getElementById('worldmap-canvas');
+    if (canvas) canvas.style.transition = 'transform 0.08s ease-out';
+    panX += dx;
+    panY += dy;
+    applyMapTransform();
+}
+
+export function handleWorldMapKey(e) {
+    const k = e.key.toLowerCase();
+    const panStep = Math.round(45 * Math.max(0.7, mapZoom));
+
+    switch(k) {
+        case 'arrowup':
+        case 'w':
+            panCamera(0, panStep);
+            return true;
+        case 'arrowdown':
+        case 's':
+            panCamera(0, -panStep);
+            return true;
+        case 'arrowleft':
+        case 'a':
+            panCamera(panStep, 0);
+            return true;
+        case 'arrowright':
+        case 'd':
+            panCamera(-panStep, 0);
+            return true;
+        case '+':
+        case '=':
+            zoomIn();
+            return true;
+        case '-':
+        case '_':
+            zoomOut();
+            return true;
+        case '0':
+        case 'r':
+            resetZoomAndRecenter();
+            return true;
+    }
+    return false;
+}
+
+export function isWorldMapOpen() {
+    const modal = document.getElementById('worldmap-modal');
+    return modal && !modal.classList.contains('hidden-ui');
+}
+
 export function initWorldMapEvents() {
     const canvas = document.getElementById('worldmap-canvas');
     const hoverInfo = document.getElementById('wm-hover-info');
     const recenterBtn = document.getElementById('btn-wm-recenter');
     const wrapper = document.getElementById('wm-canvas-wrapper');
+    const zoomInBtn = document.getElementById('btn-wm-zoom-in');
+    const zoomOutBtn = document.getElementById('btn-wm-zoom-out');
+    const zoomResetBtn = document.getElementById('btn-wm-zoom-reset');
 
-    if (canvas && hoverInfo) {
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            const tx = Math.floor(mouseX);
-            const ty = Math.floor(mouseY);
+    if (zoomInBtn) zoomInBtn.addEventListener('click', zoomIn);
+    if (zoomOutBtn) zoomOutBtn.addEventListener('click', zoomOut);
+    if (zoomResetBtn) zoomResetBtn.addEventListener('click', resetZoomAndRecenter);
+    if (recenterBtn) recenterBtn.addEventListener('click', centerOnHero);
 
-            if (tx < 0 || tx >= WORLD_SIZE || ty < 0 || ty >= WORLD_SIZE) return;
+    if (wrapper) {
+        // Drag to Pan
+        wrapper.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Only primary button
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragStartPanX = panX;
+            dragStartPanY = panY;
+            wrapper.classList.remove('cursor-grab');
+            wrapper.classList.add('cursor-grabbing');
+            if (canvas) canvas.style.transition = 'none';
+        });
 
-            if (isTileExplored(tx, ty)) {
-                const tile = gameState.worldMap[ty]?.[tx] || '~';
-                const tObj = TERRAIN[tile] || { name: 'Wilderness' };
-                const biome = getTileBiome(tile);
-                const regions = { 'P': 'Crownlands', 'F': 'Sylva', 'T': 'Borealis', 'S': 'Venomfang', 'D': 'Solaris', '#': 'Ashen Reach' };
-                const reg = regions[biome] || 'The Great Rift Ocean';
+        const handleDragMove = (e) => {
+            const rect = wrapper.getBoundingClientRect();
+            const mouseWrapperX = e.clientX - rect.left;
+            const mouseWrapperY = e.clientY - rect.top;
 
-                let landmark = "";
-                const city = Object.values(CITIES).find(c => Math.abs(c.x - tx) <= 5 && Math.abs(c.y - ty) <= 5);
-                if (city) landmark += ` ★ City of ${city.name}`;
-                if (Math.abs(tx - 294) <= 4 && Math.abs(ty - 276) <= 4) landmark += ` ✦ Ancient Shrine of the Ascendant`;
-
-                const nearPort = CONTINENTAL_PORTS.find(p => Math.abs(p.worldX - tx) <= 5 && Math.abs(p.worldY - ty) <= 5);
-                if (nearPort) landmark += ` ⚓ ${nearPort.name}`;
-
-                const nearGate = ASTRAL_WAYGATES.find(g => Math.abs(g.worldX - tx) <= 5 && Math.abs(g.worldY - ty) <= 5);
-                if (nearGate) landmark += ` Փ ${nearGate.name}`;
-
-                hoverInfo.innerHTML = `<span class="text-green-400 font-bold">${tObj.name}</span> in <span class="text-cyan-400 font-bold">${reg}</span> — Coords: <span class="text-yellow-400 font-mono">(${tx}, ${ty})</span>${landmark ? ` <span class="text-purple-300 font-bold">${landmark}</span>` : ''}`;
-            } else {
-                hoverInfo.innerHTML = `<span class="text-gray-500 italic">Uncharted Fog of War</span> — Coords: <span class="text-gray-400 font-mono">(${tx}, ${ty})</span>`;
+            if (isDragging) {
+                const dx = e.clientX - dragStartX;
+                const dy = e.clientY - dragStartY;
+                panX = dragStartPanX + dx;
+                panY = dragStartPanY + dy;
+                applyMapTransform();
             }
+
+            // Calculate world tile taking pan & zoom into account
+            if (hoverInfo) {
+                const tx = Math.floor((mouseWrapperX - panX) / mapZoom);
+                const ty = Math.floor((mouseWrapperY - panY) / mapZoom);
+
+                if (tx < 0 || tx >= WORLD_SIZE || ty < 0 || ty >= WORLD_SIZE) {
+                    hoverInfo.innerHTML = `<span class="text-gray-500 italic">Beyond the Charted Frontiers (${tx}, ${ty})</span>`;
+                    return;
+                }
+
+                if (isTileExplored(tx, ty)) {
+                    const tile = gameState.worldMap[ty]?.[tx] || '~';
+                    const tObj = TERRAIN[tile] || { name: 'Wilderness' };
+                    const biome = getTileBiome(tile);
+                    const regions = { 'P': 'Crownlands', 'F': 'Sylva', 'T': 'Borealis', 'S': 'Venomfang', 'D': 'Solaris', '#': 'Ashen Reach' };
+                    const reg = regions[biome] || 'The Great Rift Ocean';
+
+                    let landmark = "";
+                    const city = Object.values(CITIES).find(c => Math.abs(c.x - tx) <= 5 && Math.abs(c.y - ty) <= 5);
+                    if (city) landmark += ` ★ City of ${city.name}`;
+                    if (Math.abs(tx - 294) <= 4 && Math.abs(ty - 276) <= 4) landmark += ` ✦ Ancient Shrine of the Ascendant`;
+
+                    const nearPort = CONTINENTAL_PORTS.find(p => Math.abs(p.worldX - tx) <= 5 && Math.abs(p.worldY - ty) <= 5);
+                    if (nearPort) landmark += ` ⚓ ${nearPort.name}`;
+
+                    const nearGate = ASTRAL_WAYGATES.find(g => Math.abs(g.worldX - tx) <= 5 && Math.abs(g.worldY - ty) <= 5);
+                    if (nearGate) landmark += ` Փ ${nearGate.name}`;
+
+                    hoverInfo.innerHTML = `<span class="text-green-400 font-bold">${tObj.name}</span> in <span class="text-cyan-400 font-bold">${reg}</span> — Coords: <span class="text-yellow-400 font-mono">(${tx}, ${ty})</span>${landmark ? ` <span class="text-purple-300 font-bold">${landmark}</span>` : ''}`;
+                } else {
+                    hoverInfo.innerHTML = `<span class="text-gray-500 italic">Uncharted Fog of War</span> — Coords: <span class="text-gray-400 font-mono">(${tx}, ${ty})</span>`;
+                }
+            }
+        };
+
+        wrapper.addEventListener('mousemove', handleDragMove);
+
+        const stopDrag = () => {
+            if (isDragging) {
+                isDragging = false;
+                wrapper.classList.remove('cursor-grabbing');
+                wrapper.classList.add('cursor-grab');
+                if (canvas) canvas.style.transition = 'transform 0.08s ease-out';
+            }
+        };
+
+        window.addEventListener('mouseup', stopDrag);
+        wrapper.addEventListener('mouseleave', () => {
+            stopDrag();
+            if (hoverInfo) hoverInfo.innerHTML = "Hover over discovered regions to inspect coordinates & terrain.";
         });
 
-        canvas.addEventListener('mouseleave', () => {
-            hoverInfo.innerHTML = "Hover over discovered regions to inspect coordinates & terrain.";
-        });
-    }
-
-    if (recenterBtn && wrapper && canvas) {
-        recenterBtn.addEventListener('click', () => {
-            const player = gameState.player;
-            const hx = player.worldX;
-            const hy = player.worldY;
-            wrapper.scrollTo({
-                left: hx - wrapper.clientWidth / 2,
-                top: hy - wrapper.clientHeight / 2,
-                behavior: 'smooth'
-            });
-        });
+        // Mouse Wheel Zoom Anchored to Cursor
+        wrapper.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = wrapper.getBoundingClientRect();
+            const fx = e.clientX - rect.left;
+            const fy = e.clientY - rect.top;
+            const zoomMultiplier = e.deltaY < 0 ? 1.15 : 0.87;
+            if (canvas) canvas.style.transition = 'transform 0.05s ease-out';
+            setZoom(mapZoom * zoomMultiplier, fx, fy);
+        }, { passive: false });
     }
 
     const modal = document.getElementById('worldmap-modal');
@@ -453,6 +635,9 @@ export function initWorldMapEvents() {
         const observer = new MutationObserver(() => {
             if (!modal.classList.contains('hidden-ui')) {
                 renderWorldMapModal();
+                requestAnimationFrame(() => {
+                    centerOnHero();
+                });
             }
         });
         observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
@@ -464,6 +649,9 @@ export function openWorldMap() {
     if (modal) {
         modal.classList.remove('hidden-ui');
         renderWorldMapModal();
+        requestAnimationFrame(() => {
+            centerOnHero();
+        });
     }
 }
 
@@ -473,6 +661,9 @@ export function toggleWorldMap() {
         if (modal.classList.contains('hidden-ui')) {
             modal.classList.remove('hidden-ui');
             renderWorldMapModal();
+            requestAnimationFrame(() => {
+                centerOnHero();
+            });
         } else {
             modal.classList.add('hidden-ui');
         }
@@ -482,5 +673,10 @@ export function toggleWorldMap() {
 if (typeof window !== 'undefined') {
     window.openWorldMap = openWorldMap;
     window.toggleWorldMap = toggleWorldMap;
+    window.setWorldMapZoom = setZoom;
+    window.zoomInWorldMap = zoomIn;
+    window.zoomOutWorldMap = zoomOut;
+    window.resetWorldMapZoom = resetZoomAndRecenter;
+    window.centerWorldMapOnHero = centerOnHero;
 }
 

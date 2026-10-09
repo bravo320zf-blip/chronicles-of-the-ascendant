@@ -54,20 +54,32 @@ body {
 
 .ascii-art {
     white-space: pre;
-    line-height: 1.1;
-    font-size: 0.85rem;
+    line-height: 1.15;
+    font-size: 1.15rem;
     user-select: none;
+    font-weight: 700;
 }
 
 .map-tile {
     display: inline-block;
-    width: 1ch;
+    width: 1.05ch;
     text-align: center;
 }
 
 @media (min-width: 768px) {
-    .ascii-art { font-size: 1rem; }
+    .ascii-art { 
+        font-size: 1.35rem; 
+        line-height: 1.16;
+    }
 }
+
+@media (min-width: 1280px) {
+    .ascii-art { 
+        font-size: 1.45rem; 
+        line-height: 1.16;
+    }
+}
+
 
 .map-player { 
     color: #ffffff !important; 
@@ -229,6 +241,11 @@ body {
 #worldmap-canvas {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    transform-origin: 0 0;
+    transition: transform 0.08s ease-out;
+}
+#wm-canvas-wrapper {
+    touch-action: none;
 }
 #wm-canvas-wrapper::-webkit-scrollbar {
     width: 6px;

@@ -1,7 +1,7 @@
 // ASCII Map Rendering, Fog of War, Player & Multiplayer Entity Rendering
 import { gameState, passiveRank } from "../core/state.js";
 import { TERRAIN, LOCAL_TILES } from "../data/terrain.js";
-import { WORLD_SIZE, LOCAL_SIZE, VIEW_RADIUS } from "../data/constants.js";
+import { WORLD_SIZE, LOCAL_SIZE, VIEW_RADIUS, VIEW_RADIUS_Y, VIEW_RADIUS_X } from "../data/constants.js";
 import { updateTimeUI, isWorldNight } from "../core/time.js";
 
 export function updateStatus() {
@@ -36,8 +36,11 @@ export function renderMap() {
     let isDarkArea = !inWorld && (gameState.localMaps[player.zone]?.type === 'D' || gameState.localMaps[player.zone]?.type === '*');
     let effectivelyNight = isNight || isDarkArea;
 
-    let baseRadius = VIEW_RADIUS + (passiveRank('omniscience') ? player.passives.omniscience * 2 : 0);
-    let currentViewRadius = (effectivelyNight && !player.torchActive) ? 8 : baseRadius;
+    // Zoomed-in camera view with aspect ratio compensation for monospace typography
+    // Height is ~1.8x width per character cell, so radiusX is ~1.8x radiusY for a round visual circle
+    let bonusY = passiveRank('omniscience') ? Math.floor(player.passives.omniscience * 1.5) : 0;
+    let radiusY = (effectivelyNight && !player.torchActive) ? 6 : (VIEW_RADIUS_Y + bonusY);
+    let radiusX = Math.round(radiusY * 1.8);
 
     const mapContainer = document.getElementById('map-container');
     if (mapContainer) {
@@ -50,11 +53,14 @@ export function renderMap() {
         }
     }
 
-    for (let y = py - currentViewRadius; y <= py + currentViewRadius; y++) {
-        for (let x = px - currentViewRadius; x <= px + currentViewRadius; x++) {
+    for (let y = py - radiusY; y <= py + radiusY; y++) {
+        for (let x = px - radiusX; x <= px + radiusX; x++) {
             
-            let dist = Math.sqrt(Math.pow(x - px, 2) + Math.pow(y - py, 2));
-            if (dist > currentViewRadius + 0.5) {
+            // Normalized Euclidean distance to render a visually round circle on monospace grids
+            let dxNorm = (x - px) / radiusX;
+            let dyNorm = (y - py) / radiusY;
+            let distNorm = Math.sqrt(dxNorm * dxNorm + dyNorm * dyNorm);
+            if (distNorm > 1.05) {
                 asciiHTML += `<span class="map-tile"> </span>`;
                 continue;
             }

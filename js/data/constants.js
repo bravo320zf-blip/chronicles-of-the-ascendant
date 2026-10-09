@@ -1,6 +1,8 @@
 // Core Game Constants
 export const WORLD_SIZE = 600;
-export const VIEW_RADIUS = 16;
+export const VIEW_RADIUS_Y = 11; // Base vertical radius (zoomed in)
+export const VIEW_RADIUS_X = 20; // Aspect-ratio compensated horizontal radius (proportional circle)
+export const VIEW_RADIUS = 11;
 export const LOCAL_SIZE = 40;
 export const SAVE_VERSION = 3;
 

@@ -13,7 +13,7 @@ import { calculateStats, renderInventory, closeInventory, sortInventory, useItem
 import { toggleModal, renderStats, renderJournal, renderStash, renderSkills, unlockSkill, upgradeSkill, assignHotkey, renderPassives, upgradePassive } from "./ui/modals.js";
 import { showAuthModal, showCharSelectModal, showCharCreationModal, showMainGame, initAuthUIEvents, updateAccountBadge } from "./ui/authUI.js";
 import { openPlayerInteraction, closePlayerInteraction, inviteToParty, startTrade, cancelTrade, showEmoteList, performEmote, initTradeEventListeners } from "./ui/trade.js";
-import { initExploration, revealWorldArea, renderWorldMapModal, initWorldMapEvents, openWorldMap, toggleWorldMap } from "./ui/worldMap.js";
+import { initExploration, revealWorldArea, renderWorldMapModal, initWorldMapEvents, openWorldMap, toggleWorldMap, handleWorldMapKey, isWorldMapOpen } from "./ui/worldMap.js";
 import { CITIES } from "./data/worldData.js";
 import { MATERIALS, generateRandomItem } from "./data/items.js";
 import { LOCAL_TILES } from "./data/terrain.js";
@@ -765,6 +765,21 @@ function initKeyboardControls() {
         // Prevent browser default behavior (focus cycling between buttons, container & page scrolling)
         if (handledGameKeys.includes(k) || e.key.startsWith('Arrow')) {
             e.preventDefault();
+        }
+
+        // --- WORLD MAP CAMERA & CONTROLS INTERCEPT ---
+        if (isWorldMapOpen()) {
+            if (['w', 'a', 's', 'd', '+', '-', '=', '_', '0', 'r'].includes(k) || e.key.startsWith('Arrow')) {
+                e.preventDefault();
+            }
+            if (k === 'escape' || k === 'm') {
+                toggleWorldMap();
+                return;
+            }
+            if (handleWorldMapKey(e)) {
+                return;
+            }
+            return;
         }
 
         // --- TARGETING MODE OVERRIDES ---
