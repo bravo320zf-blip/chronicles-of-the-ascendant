@@ -158,11 +158,37 @@ export function renderMap() {
                     let c = tile === 'B' ? 'map-dungeon blink' : '';
                     let tileColor = lObj.color;
                     let bgStyle = "";
+                    let tileTitle = lObj.name || "";
+
+                    if (tile === '▼') {
+                        let isUnlocked = (player.unlockedFloors && player.unlockedFloors[player.zone]) || gameState.localMaps[player.zone]?.stairUnlocked;
+                        if (isUnlocked) {
+                            tileColor = '#4ade80';
+                            c = 'text-green-400 font-bold';
+                            tileTitle = 'Stairs Down (Unlocked)';
+                        } else {
+                            tileColor = '#f59e0b';
+                            c = 'text-amber-400 font-bold';
+                            tileTitle = 'Locked Staircase (Requires Dungeon Key)';
+                        }
+                    }
+
+                    if (tile === 'e' || tile === 'B') {
+                        let entity = gameState.localMaps[player.zone]?.entities?.[`${x},${y}`];
+                        if (entity?.data?.hasKey) {
+                            tileColor = '#facc15';
+                            c = 'text-yellow-300 font-bold';
+                            tileTitle = `${entity.data.name}`;
+                        } else if (entity?.data?.name) {
+                            tileTitle = entity.data.name;
+                        }
+                    }
                     
                     if (tile === 'N' || tile === 'M') {
                         let entity = gameState.localMaps[player.zone]?.entities?.[`${x},${y}`];
                         let qId = entity?.data?.questToGive?.id;
                         let playerQuest = (qId && player.quests) ? player.quests.find(q => q.id === qId) : null;
+                        tileTitle = entity?.data?.name || (tile === 'M' ? 'Merchant' : 'NPC');
 
                         if (playerQuest && playerQuest.isComplete && !playerQuest.isTurnedIn) {
                             // Completed quest ready to turn in: Pulsing Yellow
@@ -197,7 +223,7 @@ export function renderMap() {
                         }
                     }
 
-                    asciiHTML += `<span class="map-tile ${c}" style="color: ${tileColor}; ${bgStyle}">${lObj.char}</span>`;
+                    asciiHTML += `<span class="map-tile ${c}" style="color: ${tileColor}; ${bgStyle}" title="${tileTitle}">${lObj.char}</span>`;
                 }
             } else {
                 asciiHTML += `<span class="map-tile text-gray-800">#</span>`;

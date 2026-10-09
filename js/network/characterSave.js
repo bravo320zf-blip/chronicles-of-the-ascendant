@@ -168,6 +168,7 @@ export function activateCharacter(characterData) {
     if (!player.activeBuffs) player.activeBuffs = { healingSalve: 0, strengthSalve: 0 };
     if (!player.hotkeys) player.hotkeys = { q: null, e: null };
     if (!player.unlockedActives) player.unlockedActives = [];
+    if (!player.unlockedFloors) player.unlockedFloors = {};
 
     Object.assign(player, TRANSIENT_STATE);
     gameState.player = player;

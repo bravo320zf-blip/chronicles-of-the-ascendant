@@ -74,6 +74,7 @@ export function createDefaultPlayer() {
         spellbladeActive: 0,
         secondWindUsed: false,
         gatherState: { day: 0, used: 0 },
+        unlockedFloors: {},
         ...TRANSIENT_STATE
     };
 }

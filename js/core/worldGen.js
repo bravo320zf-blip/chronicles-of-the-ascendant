@@ -843,6 +843,9 @@ export function generateMultiLevel(poiKey, poi) {
             if (enemyKeys.length > 0) {
                 let keyWithKey = enemyKeys[Math.floor(Math.random() * enemyKeys.length)];
                 entities[keyWithKey].data.hasKey = true;
+                if (!entities[keyWithKey].data.name.includes('[Key Keeper]')) {
+                    entities[keyWithKey].data.name += ' 🗝️ [Key Keeper]';
+                }
             }
         }
 

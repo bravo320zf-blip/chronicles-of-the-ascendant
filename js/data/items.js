@@ -19,7 +19,9 @@ export const ASCII_ITEMS = {
     'wand': `    *   \n    |   \n    |   \n    |   `,
     'book': ` ______ \n|  __  |\n| |__| |\n|______|`,
     'torch': `   ()   \n   ||   \n   ||   \n   ||   `,
-    'material': `   ..   \n  ....  \n   ..   `
+    'material': `   ..   \n  ....  \n   ..   `,
+    'dungeon_key': `  .-.   \n ( o )==\n  \`-'\`==`,
+    'key': `  .-.   \n ( o )==\n  \`-'\`==`
 };
 
 export const RECIPES = [

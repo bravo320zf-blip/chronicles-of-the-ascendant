@@ -72,7 +72,7 @@ export function renderInventory() {
     player.inventory.forEach((item, index) => {
         let rColor = item.rarity === 'Legendary' ? 'text-yellow-400' : (item.rarity === 'Rare' ? 'text-purple-400' : (item.rarity === 'Uncommon' ? 'text-blue-400' : (item.rarity === 'Magic' ? 'text-blue-400' : 'text-green-400')));
         let bColor = item.rarity === 'Legendary' ? 'border-yellow-900' : (item.rarity === 'Rare' ? 'border-purple-900' : (item.rarity === 'Uncommon' ? 'border-blue-900' : (item.rarity === 'Magic' ? 'border-blue-900' : 'border-green-900')));
-        let ascii = ASCII_ITEMS[item.id] || (item.type === 'material' ? ASCII_ITEMS['material'] : ASCII_ITEMS['potion']);
+        let ascii = ASCII_ITEMS[item.id] || (item.id === 'dungeon_key' ? ASCII_ITEMS['dungeon_key'] : (item.type === 'quest' ? ASCII_ITEMS['key'] : (item.type === 'material' ? ASCII_ITEMS['material'] : ASCII_ITEMS['potion'])));
         
         let displayDesc = item.desc;
         if (!displayDesc || displayDesc === 'undefined') {
@@ -98,6 +98,8 @@ export function renderInventory() {
             let sellPrice = Math.floor(item.price * 0.25) || 5;
             if (passiveRank('haggler_supreme')) sellPrice = Math.floor(sellPrice * (1 + (player.passives.haggler_supreme * 0.15)));
             btnHtml = `<button class="w-full mt-2 text-[10px] uppercase font-bold tracking-widest text-black bg-yellow-500 hover:bg-yellow-400 py-1" onclick="sellItem(${index}, ${sellPrice})">SELL FOR ${sellPrice}g</button>`;
+        } else if (item.type === 'quest' || item.id === 'dungeon_key') {
+            btnHtml = `<button class="w-full mt-2 border border-yellow-700 text-yellow-400 text-[10px] uppercase font-bold tracking-widest hover:bg-yellow-900/30 transition-colors py-1" onclick="useItem(${index})">INFO</button>`;
         } else if (item.type !== 'material') {
             let btnText = item.type === 'consumable' ? 'USE' : 'EQUIP';
             btnHtml = `<button class="w-full mt-2 border border-green-900 text-[10px] uppercase font-bold tracking-widest hover:bg-green-900 transition-colors py-1" onclick="useItem(${index})">${btnText}</button>`;
@@ -134,10 +136,10 @@ export function sortInventory() {
     let player = gameState.player;
     let consolidated = [];
     player.inventory.forEach(item => {
-        if (item.type === 'consumable' || item.type === 'material') {
+        if (item.type === 'consumable' || item.type === 'material' || item.id === 'dungeon_key') {
             let existing = consolidated.find(i => i.id === item.id);
             if (existing) {
-                existing.count += (item.count || 1);
+                existing.count = (existing.count || 1) + (item.count || 1);
             } else {
                 item.count = item.count || 1;
                 consolidated.push(item);
@@ -157,14 +159,40 @@ export function sortInventory() {
         return a.name.localeCompare(b.name);
     });
     
-    if (window.savePlayerData) window.savePlayerData();
-    renderInventory();
+    if (typeof window !== 'undefined' && window.savePlayerData) window.savePlayerData();
+    if (typeof document !== 'undefined') renderInventory();
 }
 
 export function useItem(index) {
     let player = gameState.player;
     let item = player.inventory[index];
     if (!item || item.type === 'material') return;
+
+    if (item.id === 'dungeon_key' || item.type === 'quest') {
+        if (item.id === 'dungeon_key') {
+            let lMap = gameState.localMaps[player.zone];
+            let nearStairs = false;
+            if (lMap && lMap.map) {
+                const dirs = [[0,0], [0,1], [0,-1], [1,0], [-1,0]];
+                for (let d of dirs) {
+                    let tx = player.localX + d[0];
+                    let ty = player.localY + d[1];
+                    if (lMap.map[ty]?.[tx] === '▼') {
+                        nearStairs = true;
+                        break;
+                    }
+                }
+            }
+            if (nearStairs) {
+                logMessage("🗝️ Dungeon Key: Step directly onto the locked staircase (▼) to unlock it and descend deeper!", "text-yellow-400 font-bold");
+            } else {
+                logMessage("🗝️ Dungeon Key: Unlocks the sealed iron gate over the staircase down (▼) to reach deeper dungeon floors. Step onto the staircase (▼) to use it!", "text-yellow-300");
+            }
+        } else {
+            logMessage(`📜 ${item.name}: ${item.desc || 'A valuable quest artifact.'}`, "text-cyan-400");
+        }
+        return;
+    }
 
     if (item.type === 'consumable') {
         if (item.id.includes('potion') || item.id.includes('salve') || item.id.includes('elixir')) {

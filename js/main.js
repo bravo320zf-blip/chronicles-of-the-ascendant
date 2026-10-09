@@ -248,19 +248,49 @@ window.movePlayer = function(dx, dy) {
             return;
         }
         if (tile === '▼') {
+            if (!player.unlockedFloors) player.unlockedFloors = {};
+            let isUnlocked = player.unlockedFloors[player.zone] || lMap.stairUnlocked;
+
+            if (!isUnlocked) {
+                let keyIndex = (player.inventory || []).findIndex(i => i.id === 'dungeon_key' || (i.name && i.name.toLowerCase() === 'dungeon key'));
+                if (keyIndex === -1) {
+                    logMessage(`🔒 <span class="text-yellow-400 font-bold">The iron gate over the staircase (▼) is locked!</span>`, "warning");
+                    logMessage(`You need a <span class="text-yellow-300 font-bold">Dungeon Key</span> to unlock the passage to the next floor. Defeat the <span class="text-yellow-300 font-bold">[Key Keeper]</span> roaming this floor to claim it!`, "system");
+                    return;
+                }
+
+                // Consume 1 Dungeon Key
+                let keyItem = player.inventory[keyIndex];
+                if (keyItem.count && keyItem.count > 1) {
+                    keyItem.count -= 1;
+                } else {
+                    player.inventory.splice(keyIndex, 1);
+                }
+
+                player.unlockedFloors[player.zone] = true;
+                lMap.stairUnlocked = true;
+                logMessage(`🗝️ *** With a loud *CLANG*, you turn the Dungeon Key in the lock! The sealed iron gate opens! ***`, "text-yellow-400 font-bold blink");
+                if (window.sortInventory) window.sortInventory();
+            }
+
             registerAction();
-            let [p, z] = player.zone.split('_');
-            player.zone = `${p}_${parseInt(z)+1}`;
-            logMessage("You descend deeper...", "system");
+            let lastIdx = player.zone.lastIndexOf('_');
+            let p = lastIdx !== -1 ? player.zone.substring(0, lastIdx) : player.zone;
+            let z = lastIdx !== -1 ? parseInt(player.zone.substring(lastIdx + 1)) : 0;
+            player.zone = `${p}_${z + 1}`;
+            logMessage("You descend deeper into the dungeon...", "system");
             enterFloor(player.zone, '▲'); 
             renderMap(); 
+            triggerAutoSave();
             broadcastPresence();
             return;
         }
         if (tile === '▲') {
             registerAction();
-            let [p, z] = player.zone.split('_');
-            player.zone = `${p}_${parseInt(z)-1}`;
+            let lastIdx = player.zone.lastIndexOf('_');
+            let p = lastIdx !== -1 ? player.zone.substring(0, lastIdx) : player.zone;
+            let z = lastIdx !== -1 ? parseInt(player.zone.substring(lastIdx + 1)) : 0;
+            player.zone = `${p}_${Math.max(0, z - 1)}`;
             logMessage("You climb up...", "system");
             enterFloor(player.zone, '▼'); 
             renderMap(); 
@@ -500,6 +530,16 @@ window.executeAction = function(action) {
     if (action === 'look') {
         let biomeName = player.zone === 'world' ? 'Wilderness' : gameState.localMaps[player.zone]?.name;
         logMessage(`You look around. Current location: ${biomeName}. Coordinates: (${player.x}, ${player.y})`, "system");
+        if (player.zone !== 'world') {
+            let lMap = gameState.localMaps[player.zone];
+            if (lMap && lMap.map) {
+                let hasStairs = lMap.map.some(row => row.includes('▼'));
+                if (hasStairs) {
+                    let isUnlocked = (player.unlockedFloors && player.unlockedFloors[player.zone]) || lMap.stairUnlocked;
+                    logMessage(`Staircase (▼): The passage down is <span class="${isUnlocked ? 'text-green-400' : 'text-amber-400'} font-bold">${isUnlocked ? 'UNLOCKED' : 'LOCKED (Requires Dungeon Key)'}</span>.`, "system");
+                }
+            }
+        }
         // Print nearby online players
         let nearby = [];
         gameState.onlinePlayers.forEach(op => {
@@ -563,13 +603,34 @@ function initCommandInput() {
                 let maxG = getMaxDailyGathers(player);
                 logMessage(`🌿 Gathering Energy: <span class="text-yellow-400 font-bold">${rem} / ${maxG}</span> remaining today. (Replenishes at 06:00 AM dawn. Level up crafting professions for +2 per level).`, "system");
             }
+            else if (['/descend', 'descend', '/down', 'down'].includes(cmd.toLowerCase())) {
+                let lMap = gameState.localMaps[gameState.player.zone];
+                if (lMap && lMap.map) {
+                    const dirs = [[0,0], [0,1], [0,-1], [1,0], [-1,0]];
+                    let foundStairs = false;
+                    for (let d of dirs) {
+                        let tx = gameState.player.localX + d[0];
+                        let ty = gameState.player.localY + d[1];
+                        if (lMap.map[ty]?.[tx] === '▼') {
+                            foundStairs = true;
+                            movePlayer(d[0], d[1]);
+                            break;
+                        }
+                    }
+                    if (!foundStairs) {
+                        logMessage("No staircase down (▼) adjacent to you. Move closer to the stairs!", "text-gray-400");
+                    }
+                } else {
+                    logMessage("You cannot descend here.", "text-gray-400");
+                }
+            }
             else if (cmd === '/help' || cmd === 'help') {
                 logMessage("=== MUD COMMAND GUIDE ===", "system");
                 logMessage("Movement: [Arrow Keys] or 'n', 's', 'e', 'w'");
                 logMessage("Combat: [A] Attack, [Q]/[E] Cast Spells, /flee (run away)");
                 logMessage("Chat: '/say <msg>' (local) | '/shout <msg>' (global) | '/who' (online players)");
                 logMessage("Shortcuts: [M] World Map, [C] Character, [I] Inventory, [S] Skills, [R] Crafting, [P] Passives, [J] Journal, [F] Torch, [A] Attack, [G] Gather");
-                logMessage("Commands: /map, /look, /gather, /energy, /rest, /torch, /time, /attack, /flee, /respawn");
+                logMessage("Commands: /map, /look, /gather, /energy, /rest, /torch, /time, /attack, /flee, /descend, /respawn");
             }
             else if (cmd === '/respawn') {
                 let player = gameState.player;

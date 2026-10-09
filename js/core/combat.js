@@ -243,6 +243,17 @@ export function resolveSkillHit(skill, tx, ty, caster, lMap) {
                     delete lMap.entities[`${t.x},${t.y}`];
                     logMessage(`${t.data.name} was destroyed!`, "success");
                     if (caster === 'player') {
+                        if (t.data.hasKey) {
+                            if (!player.inventory) player.inventory = [];
+                            let existingKey = player.inventory.find(i => i.id === 'dungeon_key');
+                            if (existingKey) {
+                                existingKey.count = (existingKey.count || 1) + 1;
+                            } else {
+                                player.inventory.push({ id: 'dungeon_key', name: 'Dungeon Key', desc: 'Unlocks the barred staircase gate (▼) to the next floor.', type: 'quest', count: 1, rarity: 'Legendary', price: 0 });
+                            }
+                            logMessage(`*** The ${t.data.name} drops a Dungeon Key! ***`, "text-yellow-400 font-bold blink");
+                            if (window.sortInventory) window.sortInventory();
+                        }
                         let goldGain = t.data.isBoss ? 50 : 10;
                         if (passiveRank('scavenger_king')) goldGain += Math.floor(goldGain * (player.passives.scavenger_king * 0.5));
                         player.gold += goldGain;
@@ -439,8 +450,15 @@ export function handleCombatTurn(skipPlayerAttack = false) {
         logMessage(`You defeated the ${e.name}!`, "success");
         
         if (e.hasKey) {
-            player.inventory.push({ id: 'dungeon_key', name: 'Dungeon Key', desc: 'Unlocks the path to the next floor.', type: 'quest', count: 1, rarity: 'Legendary', price: 0 });
+            if (!player.inventory) player.inventory = [];
+            let existingKey = player.inventory.find(i => i.id === 'dungeon_key');
+            if (existingKey) {
+                existingKey.count = (existingKey.count || 1) + 1;
+            } else {
+                player.inventory.push({ id: 'dungeon_key', name: 'Dungeon Key', desc: 'Unlocks the barred staircase gate (▼) to the next floor.', type: 'quest', count: 1, rarity: 'Legendary', price: 0 });
+            }
             logMessage(`*** The ${e.name} drops a Dungeon Key! ***`, "text-yellow-400 font-bold blink");
+            if (window.sortInventory) window.sortInventory();
         }
         
         if (player.quests) {
